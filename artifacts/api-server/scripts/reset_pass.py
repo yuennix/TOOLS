@@ -64,7 +64,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass = generate_device_info(custom_password)
         uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
-        token = reset_link.split("&token=")[1].split(":")[0]
+        token = reset_link.split("&token=")[1].split("&")[0]
 
         url = "https://i.instagram.com/api/v1/accounts/password_reset/"
         data = {
