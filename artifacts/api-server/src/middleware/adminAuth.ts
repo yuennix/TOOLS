@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export const ADMIN_PASSWORD = "yuennix";
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "yuennix";
 export const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "weyn-admin-jwt-secret-key";
 
 export function signAdminToken(): string {

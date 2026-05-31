@@ -42,3 +42,8 @@ externalPort = 3000
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "node artifacts/api-server/dist/index.js & npx serve -s artifacts/weyn-tools/dist -l 5000"]
 build = ["bash", "-c", "pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build"]
+
+[userenv]
+
+[userenv.shared]
+ADMIN_JWT_SECRET = "e0b7275edc3d99ab47a09abb97b2cd259e42bca97db19ce1daeb783a2c950337e59873e8843b0fad6d6835ee6c580530"
