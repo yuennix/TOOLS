@@ -5,7 +5,7 @@ import path from "path";
 
 const router = Router();
 
-const SCRIPT = path.resolve(__dirname, "../../../scripts/send_recovery.py");
+const SCRIPT = path.resolve(__dirname, "../../scripts/send_recovery.py");
 
 function runPython(emails: string[]): Promise<{ results: Array<{ email: string; success: boolean; response: string }> }> {
   return new Promise((resolve, reject) => {
