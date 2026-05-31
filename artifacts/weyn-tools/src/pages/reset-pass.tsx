@@ -6,7 +6,6 @@ export default function ResetPass() {
   const { toast } = useToast();
   const [form, setForm] = useState({
     resetLink: "",
-    email: "",
     chatId: "",
     botToken: "",
     customPassword: "",
@@ -21,7 +20,7 @@ export default function ResetPass() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!form.resetLink || !form.email || !form.chatId || !form.botToken) {
+    if (!form.resetLink || !form.chatId || !form.botToken) {
       toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
       return;
     }
@@ -35,7 +34,6 @@ export default function ResetPass() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resetLink: form.resetLink,
-          email: form.email,
           chatId: form.chatId,
           botToken: form.botToken,
           customPassword: form.customPassword || null,
@@ -57,7 +55,6 @@ export default function ResetPass() {
 
   const fields = [
     { name: "resetLink", label: "RESET LINK (from email)", placeholder: "https://www.instagram.com/accounts/password/reset/?uidb36=...&token=...", required: true },
-    { name: "email", label: "TARGET EMAIL", placeholder: "target@gmail.com", required: true },
     { name: "chatId", label: "TELEGRAM CHAT ID", placeholder: "-1001234567890", required: true },
     { name: "botToken", label: "TELEGRAM BOT TOKEN", placeholder: "1234567890:AAF...", required: true },
     { name: "customPassword", label: "CUSTOM PASSWORD (optional)", placeholder: "Leave empty for random", required: false },
