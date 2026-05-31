@@ -76,11 +76,14 @@ export default function ResetLink() {
         <div className="border border-border p-6 space-y-2">
           <p className="text-muted-foreground text-xs mb-3">&gt; RESULTS:</p>
           {results.map((r, i) => (
-            <div key={i} data-testid={`result-item-${i}`} className="border border-border p-3 space-y-1">
+            <div key={i} data-testid={`result-item-${i}`} className="border border-border p-3 space-y-2">
               <p className="text-primary font-mono text-sm">{r.email}</p>
               <p className={`text-xs font-mono ${r.success ? "text-primary" : "text-destructive"}`}>
-                {r.success ? "[SUCCESS]" : "[FAILED]"} {r.response.slice(0, 120)}
+                {r.success ? "[REQUEST SENT]" : "[FAILED]"}
               </p>
+              <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all bg-card border border-border p-2">
+                {r.response}
+              </pre>
             </div>
           ))}
         </div>
