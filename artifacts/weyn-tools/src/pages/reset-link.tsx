@@ -40,48 +40,114 @@ export default function ResetLink() {
   }
 
   return (
-    <div className="min-h-screen p-8 max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/" data-testid="link-back" className="text-muted-foreground hover:text-primary text-sm">&lt; BACK</Link>
-        <h1 className="text-primary font-mono text-lg">RESET LINK</h1>
+    <div
+      className="min-h-screen p-8 max-w-2xl mx-auto space-y-6 relative"
+      style={{ background: "#050505" }}
+    >
+      <div className="scanline-overlay" />
+
+      {/* Header */}
+      <div className="flex items-center gap-4 pt-2 animate-fade-in-up">
+        <Link
+          href="/"
+          data-testid="link-back"
+          className="text-xs tracking-widest transition-colors duration-150"
+          style={{ color: "#ff000066" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#ff0000")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#ff000066")}
+        >
+          ← BACK
+        </Link>
+        <span style={{ color: "#ff000033" }}>|</span>
+        <h1
+          className="font-mono text-sm tracking-widest animate-red-pulse"
+        >
+          RESET LINK
+        </h1>
       </div>
 
-      <div className="border border-border p-6 space-y-4">
-        <p className="text-muted-foreground text-xs">&gt; Send recovery emails to Instagram accounts</p>
+      {/* Panel */}
+      <div
+        className="p-6 space-y-5 animate-fade-in-up animate-border-glow"
+        style={{
+          border: "1px solid #ff000055",
+          background: "#0a0a0a",
+          animationDelay: "0.1s",
+          opacity: 0,
+          animationFillMode: "forwards",
+        }}
+      >
+        <p className="text-xs" style={{ color: "#ff000077" }}>
+          &gt; SEND RECOVERY EMAILS TO INSTAGRAM ACCOUNTS
+        </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-primary text-sm font-mono">TARGET EMAILS (one per line)</label>
+            <label className="text-xs tracking-widest" style={{ color: "#ffffff88" }}>
+              TARGET EMAILS <span style={{ color: "#ff000066" }}>(ONE PER LINE)</span>
+            </label>
             <textarea
               data-testid="input-emails"
-              className="w-full h-32 bg-background border border-input text-foreground font-mono text-sm p-3 focus:outline-none focus:border-primary resize-none"
-              placeholder="user@gmail.com&#10;another@gmail.com"
+              className="w-full h-36 bg-transparent font-mono text-sm p-3 resize-none transition-all duration-200"
+              style={{
+                border: "1px solid #ff000044",
+                color: "#ffffff",
+                background: "#050505",
+              }}
+              placeholder={"user@gmail.com\nanother@gmail.com"}
               value={emailsText}
               onChange={(e) => setEmailsText(e.target.value)}
             />
           </div>
 
-          <button
-            data-testid="button-submit"
-            type="submit"
-            disabled={loading}
-            className="w-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors p-3 font-mono text-sm disabled:opacity-50"
-          >
-            {loading ? "PROCESSING..." : "SEND RECOVERY EMAILS"}
-          </button>
+          <SubmitButton loading={loading} label="SEND RECOVERY EMAILS" />
         </form>
       </div>
 
+      {/* Results */}
       {results.length > 0 && (
-        <div className="border border-border p-6 space-y-2">
-          <p className="text-muted-foreground text-xs mb-3">&gt; RESULTS:</p>
+        <div
+          className="p-6 space-y-3 animate-fade-in-up"
+          style={{ border: "1px solid #ff000044", background: "#0a0a0a" }}
+        >
+          <p className="text-xs mb-4" style={{ color: "#ff000077" }}>
+            &gt; RESULTS — {results.length} TARGET(S) PROCESSED
+          </p>
           {results.map((r, i) => (
-            <div key={i} data-testid={`result-item-${i}`} className="border border-border p-3 space-y-2">
-              <p className="text-primary font-mono text-sm">{r.email}</p>
-              <p className={`text-xs font-mono ${r.success ? "text-primary" : "text-destructive"}`}>
-                {r.success ? "[REQUEST SENT]" : "[FAILED]"}
-              </p>
-              <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all bg-card border border-border p-2">
+            <div
+              key={i}
+              data-testid={`result-item-${i}`}
+              className="p-4 space-y-2"
+              style={{
+                border: `1px solid ${r.success ? "#ff000066" : "#ff000033"}`,
+                background: r.success ? "#ff000009" : "#0d0000",
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="text-xs"
+                  style={{ color: r.success ? "#44ff44" : "#ff4444" }}
+                >
+                  {r.success ? "✓" : "✗"}
+                </span>
+                <span className="font-mono text-sm" style={{ color: "#ffffff" }}>
+                  {r.email}
+                </span>
+                <span
+                  className="ml-auto text-xs tracking-wider"
+                  style={{ color: r.success ? "#44ff4488" : "#ff444488" }}
+                >
+                  {r.success ? "[SENT]" : "[FAILED]"}
+                </span>
+              </div>
+              <pre
+                className="text-xs font-mono whitespace-pre-wrap break-all p-3"
+                style={{
+                  color: "#666",
+                  background: "#050505",
+                  border: "1px solid #ff000022",
+                }}
+              >
                 {r.response}
               </pre>
             </div>
@@ -89,5 +155,35 @@ export default function ResetLink() {
         </div>
       )}
     </div>
+  );
+}
+
+function SubmitButton({ loading, label }: { loading: boolean; label: string }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      data-testid="button-submit"
+      type="submit"
+      disabled={loading}
+      className="w-full font-mono text-sm tracking-widest transition-all duration-200 p-4"
+      style={{
+        border: loading ? "1px solid #ff000033" : hovered ? "1px solid #ff0000" : "1px solid #ff000088",
+        color: loading ? "#ff000055" : hovered ? "#000000" : "#ff0000",
+        background: loading ? "transparent" : hovered ? "#ff0000" : "transparent",
+        boxShadow: hovered && !loading ? "0 0 20px #ff000077, inset 0 0 10px #ff000022" : "none",
+        cursor: loading ? "not-allowed" : "pointer",
+        textShadow: hovered && !loading ? "none" : "0 0 8px #ff000066",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {loading ? (
+        <span className="flex items-center justify-center gap-2">
+          <span className="animate-blink" style={{ color: "#ff0000" }}>■</span>
+          PROCESSING...
+        </span>
+      ) : label}
+    </button>
   );
 }
