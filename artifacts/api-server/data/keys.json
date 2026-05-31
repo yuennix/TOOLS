@@ -4,10 +4,10 @@
       "id": "6eedddb6-d8b2-41a3-83ab-324a6f8f3ed8",
       "name": "weyn",
       "key": "WEYN-XXJX-9999-ZUA7",
-      "status": "pending",
-      "expiresAt": null,
+      "status": "approved",
+      "expiresAt": 1780270472870,
       "createdAt": 1780266481471,
-      "approvedAt": null,
+      "approvedAt": 1780266872870,
       "usedAt": null
     }
   ]

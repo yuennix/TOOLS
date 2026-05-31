@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 const ADMIN_TOKEN_KEY = "weyn_admin_token";
@@ -186,15 +187,31 @@ function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }
           <p className="text-xs font-mono tracking-widest" style={{ color: "var(--red-accent)" }}>ADMIN PANEL</p>
           <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Access Keys</h1>
         </div>
-        <button
-          onClick={onLogout}
-          className="text-xs font-mono px-3 py-1.5 transition-colors"
-          style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--text-muted)", background: "transparent", cursor: "pointer" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-        >
-          LOGOUT
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/access"
+            className="text-xs font-mono px-3 py-1.5 transition-colors flex items-center gap-1.5"
+            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--text-muted)", background: "transparent" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            ACCESS PAGE
+          </Link>
+          <button
+            onClick={onLogout}
+            className="text-xs font-mono px-3 py-1.5 transition-colors"
+            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--text-muted)", background: "transparent", cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+          >
+            LOGOUT
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-up">
