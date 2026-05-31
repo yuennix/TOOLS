@@ -136,7 +136,7 @@ function ToolCard({
         border: hovered ? "1px solid var(--red-accent)" : "1px solid var(--line)",
         background: hovered ? "var(--surface-2)" : "var(--surface)",
         borderRadius: "6px",
-        padding: "24px",
+        padding: "16px",
         boxShadow: hovered
           ? "0 0 0 1px var(--red-glow), 0 4px 20px var(--red-glow)"
           : "0 1px 4px rgba(0,0,0,0.06)",
@@ -147,9 +147,9 @@ function ToolCard({
       onMouseLeave={() => setHovered(false)}
     >
       {/* Top row */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-2">
         <div
-          className="w-8 h-8 flex items-center justify-center font-mono text-xs font-bold border"
+          className="w-7 h-7 flex items-center justify-center font-mono text-xs font-bold border"
           style={{
             border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
             color: hovered ? "var(--red-accent)" : "var(--text-muted)",
@@ -174,20 +174,20 @@ function ToolCard({
       </div>
 
       {/* Content */}
-      <div className="space-y-1 mb-4">
+      <div className="space-y-0.5 mb-3">
         <p
-          className="text-xs font-mono tracking-widest"
+          className="text-xs font-mono tracking-wider"
           style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}
         >
           {tool.subtitle}
         </p>
         <h3
-          className="text-lg font-semibold"
+          className="text-base font-semibold"
           style={{ color: "var(--text-primary)" }}
         >
           {tool.title}
         </h3>
-        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+        <p className="text-xs" style={{ color: "var(--text-secondary)", lineHeight: "1.5" }}>
           {tool.desc}
         </p>
       </div>
@@ -202,8 +202,8 @@ function ToolCard({
       >
         RUN MODULE
         <svg
-          width="12"
-          height="12"
+          width="11"
+          height="11"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
