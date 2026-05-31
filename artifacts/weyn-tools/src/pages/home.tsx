@@ -1,185 +1,218 @@
 import { Link } from "wouter";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
-const ASCII = `
- ██╗    ██╗███████╗██╗   ██╗███╗   ██╗
- ██║    ██║██╔════╝╚██╗ ██╔╝████╗  ██║
- ██║ █╗ ██║█████╗   ╚████╔╝ ██╔██╗ ██║
- ██║███╗██║██╔══╝    ╚██╔╝  ██║╚██╗██║
- ╚███╔███╔╝███████╗   ██║   ██║ ╚████║
-  ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚═╝  ╚═══╝`;
+const TOOLS = [
+  {
+    id: "01",
+    href: "/reset-link",
+    testId: "link-reset-link",
+    title: "Reset Link",
+    subtitle: "SEND RECOVERY EMAIL",
+    desc: "Trigger an Instagram account recovery email to any target address.",
+    tag: "SMTP",
+  },
+  {
+    id: "02",
+    href: "/reset-pass",
+    testId: "link-reset-pass",
+    title: "Reset Pass",
+    subtitle: "PASSWORD OVERRIDE",
+    desc: "Reset an Instagram password directly using a recovery link.",
+    tag: "API",
+  },
+];
 
 export default function Home() {
-  const [visible, setVisible] = useState(false);
-  const [dots, setDots] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 80);
+    const t = setTimeout(() => setMounted(true), 60);
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(() => setDots((d) => (d.length >= 3 ? "" : d + ".")), 500);
-    return () => clearInterval(id);
-  }, []);
-
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-8 gap-10 relative"
-      style={{ background: "#050505" }}
-    >
-      <div className="scanline-overlay" />
+    <div className="max-w-4xl mx-auto px-6 py-16 space-y-16">
 
-      {/* Logo */}
-      <div
-        className={`flex flex-col items-center gap-2 transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
+      {/* Hero */}
+      <section
+        className="text-center space-y-6"
+        style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease" }}
       >
-        <pre
-          className="text-xs leading-tight select-none animate-glitch animate-flicker"
+        <div className="space-y-3">
+          <p
+            className="text-xs font-mono tracking-[0.3em] uppercase"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Instagram Recovery Suite
+          </p>
+          <h1
+            className="font-mono text-5xl sm:text-6xl font-bold tracking-widest animate-red-breathe"
+            style={{ letterSpacing: "0.18em" }}
+          >
+            WEYN
+          </h1>
+          <p
+            className="text-sm max-w-md mx-auto"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Professional toolset for Instagram account recovery operations.
+            Built for speed and reliability.
+          </p>
+        </div>
+
+        {/* Stats bar */}
+        <div
+          className="inline-flex items-center gap-6 px-6 py-3 border text-xs font-mono"
           style={{
-            color: "#ff0000",
-            textShadow: "0 0 8px #ff0000, 0 0 20px #ff000066, 0 0 40px #ff000033",
-            fontFamily: "'Share Tech Mono', monospace",
+            border: "1px solid var(--line)",
+            background: "var(--surface-2)",
+            borderRadius: "4px",
           }}
         >
-          {ASCII}
-        </pre>
-
-        <div
-          className="text-xs tracking-widest mt-1"
-          style={{ color: "#ffffff99", letterSpacing: "0.35em" }}
-        >
-          INSTAGRAM RECOVERY TOOLS
-          <span
-            className="animate-blink ml-1"
-            style={{ color: "#ff0000" }}
-          >
-            _
-          </span>
+          {[
+            { label: "STATUS", val: "ONLINE", color: "#22c55e" },
+            { label: "TOOLS", val: "02", color: "var(--red-accent)" },
+            { label: "ENGINE", val: "PYTHON", color: "var(--text-secondary)" },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-2">
+              <span style={{ color: "var(--text-muted)" }}>{s.label}</span>
+              <span style={{ color: s.color, fontWeight: 600 }}>{s.val}</span>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* System status */}
+      {/* Divider */}
       <div
-        className="w-full max-w-md text-xs space-y-1 animate-fade-in-up"
-        style={{ animationDelay: "0.1s", opacity: 0, animationFillMode: "forwards" }}
-      >
-        {[
-          { label: "SYS", value: "ONLINE", ok: true },
-          { label: "MODULE", value: "LOADED", ok: true },
-          { label: "STATUS", value: "READY" + dots, ok: true },
-        ].map((row) => (
-          <div key={row.label} className="flex gap-3" style={{ color: "#555" }}>
-            <span style={{ color: "#ff000088" }}>[{row.label}]</span>
-            <span style={{ color: row.ok ? "#44ff44" : "#ff4444" }}>
-              {row.value}
-            </span>
-          </div>
-        ))}
-      </div>
+        className="h-px w-full"
+        style={{ background: "linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent)" }}
+      />
 
       {/* Tool cards */}
-      <div
-        className="w-full max-w-md space-y-3 animate-fade-in-up"
-        style={{ animationDelay: "0.2s", opacity: 0, animationFillMode: "forwards" }}
-      >
-        <p className="text-xs mb-2" style={{ color: "#ff000099" }}>
-          &gt; SELECT MODULE:
+      <section className="space-y-4">
+        <p
+          className="text-xs font-mono tracking-widest"
+          style={{ color: "var(--text-muted)" }}
+        >
+          SELECT MODULE
         </p>
-
-        <ToolCard
-          href="/reset-link"
-          testId="link-reset-link"
-          index="01"
-          title="RESET LINK"
-          desc="Send Instagram account recovery emails to target"
-          delay="0.25s"
-        />
-        <ToolCard
-          href="/reset-pass"
-          testId="link-reset-pass"
-          index="02"
-          title="RESET PASS"
-          desc="Reset Instagram password via recovery link"
-          delay="0.32s"
-        />
-      </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {TOOLS.map((tool, i) => (
+            <ToolCard key={tool.id} tool={tool} delay={i * 80} />
+          ))}
+        </div>
+      </section>
 
       {/* Footer */}
       <div
-        className="text-xs animate-fade-in-up"
-        style={{
-          color: "#333",
-          animationDelay: "0.4s",
-          opacity: 0,
-          animationFillMode: "forwards",
-          letterSpacing: "0.2em",
-        }}
+        className="text-center text-xs font-mono"
+        style={{ color: "var(--text-muted)" }}
       >
-        BY{" "}
-        <span style={{ color: "#ff000066" }}>@jinbelowg</span>
-        {" "}— USE AT YOUR OWN RISK
+        <span>BY </span>
+        <span style={{ color: "var(--red-accent)" }}>@jinbelowg</span>
+        <span className="mx-3" style={{ color: "var(--line)" }}>·</span>
+        <span>USE RESPONSIBLY</span>
       </div>
     </div>
   );
 }
 
 function ToolCard({
-  href, testId, index, title, desc, delay,
+  tool,
+  delay,
 }: {
-  href: string;
-  testId: string;
-  index: string;
-  title: string;
-  desc: string;
-  delay: string;
+  tool: (typeof TOOLS)[number];
+  delay: number;
 }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <Link
-      href={href}
-      data-testid={testId}
-      className="block p-5 cursor-pointer transition-all duration-200 animate-fade-in-up"
+      href={tool.href}
+      data-testid={tool.testId}
+      className="block group transition-all duration-200 animate-fade-up"
       style={{
-        border: hovered ? "1px solid #ff0000" : "1px solid #ff000044",
-        background: hovered ? "#ff000011" : "#0a0a0a",
+        animationDelay: `${delay}ms`,
+        border: hovered ? "1px solid var(--red-accent)" : "1px solid var(--line)",
+        background: hovered ? "var(--surface-2)" : "var(--surface)",
+        borderRadius: "6px",
+        padding: "24px",
         boxShadow: hovered
-          ? "0 0 24px #ff000055, inset 0 0 16px #ff000011"
-          : "0 0 6px #ff000022",
-        animationDelay: delay,
-        opacity: 0,
-        animationFillMode: "forwards",
+          ? "0 0 0 1px var(--red-glow), 0 4px 20px var(--red-glow)"
+          : "0 1px 4px rgba(0,0,0,0.06)",
+        cursor: "pointer",
+        textDecoration: "none",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="flex items-center gap-3 mb-1">
-        <span
-          className="text-xs"
-          style={{ color: hovered ? "#ff000099" : "#ff000055" }}
-        >
-          [{index}]
-        </span>
-        <span
-          className="font-mono text-sm tracking-widest"
+      {/* Top row */}
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="w-8 h-8 flex items-center justify-center font-mono text-xs font-bold border"
           style={{
-            color: hovered ? "#ff0000" : "#ffffff",
-            textShadow: hovered ? "0 0 8px #ff000088" : "none",
+            border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
+            color: hovered ? "var(--red-accent)" : "var(--text-muted)",
+            background: hovered ? "var(--red-glow)" : "transparent",
+            borderRadius: "4px",
+            transition: "all 0.2s",
           }}
         >
-          {title}
-        </span>
+          {tool.id}
+        </div>
         <span
-          className="ml-auto text-xs animate-blink"
-          style={{ color: "#ff000066", opacity: hovered ? 1 : 0 }}
+          className="text-xs font-mono px-2 py-0.5 border"
+          style={{
+            border: "1px solid var(--line)",
+            color: "var(--text-muted)",
+            borderRadius: "3px",
+            background: "var(--surface-2)",
+          }}
         >
-          &gt;
+          {tool.tag}
         </span>
       </div>
-      <p className="text-xs ml-9" style={{ color: "#555" }}>
-        {desc}
-      </p>
+
+      {/* Content */}
+      <div className="space-y-1 mb-4">
+        <p
+          className="text-xs font-mono tracking-widest"
+          style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}
+        >
+          {tool.subtitle}
+        </p>
+        <h3
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          {tool.title}
+        </h3>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          {tool.desc}
+        </p>
+      </div>
+
+      {/* CTA */}
+      <div
+        className="flex items-center gap-1 text-xs font-mono"
+        style={{
+          color: hovered ? "var(--red-accent)" : "var(--text-muted)",
+          transition: "color 0.2s",
+        }}
+      >
+        RUN MODULE
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          style={{ transform: hovered ? "translateX(3px)" : "none", transition: "transform 0.2s" }}
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
     </Link>
   );
 }

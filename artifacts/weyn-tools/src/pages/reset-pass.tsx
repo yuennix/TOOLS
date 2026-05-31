@@ -5,37 +5,39 @@ import { useToast } from "@/hooks/use-toast";
 const FIELDS = [
   {
     name: "resetLink" as const,
-    label: "RESET LINK",
-    hint: "FROM RECOVERY EMAIL",
+    label: "Reset Link",
+    hint: "From recovery email",
     placeholder: "https://www.instagram.com/accounts/password/reset/?uidb36=...&token=...",
     required: true,
   },
   {
     name: "chatId" as const,
-    label: "TELEGRAM CHAT ID",
-    hint: "DESTINATION",
+    label: "Telegram Chat ID",
+    hint: "Destination",
     placeholder: "-1001234567890",
     required: true,
   },
   {
     name: "botToken" as const,
-    label: "TELEGRAM BOT TOKEN",
-    hint: "REQUIRED",
+    label: "Telegram Bot Token",
+    hint: "Required",
     placeholder: "1234567890:AAF...",
     required: true,
   },
   {
     name: "customPassword" as const,
-    label: "CUSTOM PASSWORD",
-    hint: "OPTIONAL — LEAVE BLANK FOR AUTO",
-    placeholder: "Leave empty to auto-generate",
+    label: "Custom Password",
+    hint: "Optional — leave blank to auto-generate",
+    placeholder: "Leave empty for random password",
     required: false,
   },
 ] as const;
 
+type FormState = { resetLink: string; chatId: string; botToken: string; customPassword: string };
+
 export default function ResetPass() {
   const { toast } = useToast();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     resetLink: "",
     chatId: "",
     botToken: "",
@@ -55,15 +57,12 @@ export default function ResetPass() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     if (!form.resetLink || !form.chatId || !form.botToken) {
       toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
       return;
     }
-
     setLoading(true);
     setResult(null);
-
     try {
       const res = await fetch("/api/reset-pass", {
         method: "POST",
@@ -90,46 +89,46 @@ export default function ResetPass() {
   }
 
   return (
-    <div
-      className="min-h-screen p-8 max-w-2xl mx-auto space-y-6 relative"
-      style={{ background: "#050505" }}
-    >
-      <div className="scanline-overlay" />
+    <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
 
-      {/* Header */}
-      <div className="flex items-center gap-4 pt-2 animate-fade-in-up">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-xs font-mono animate-slide-in">
         <Link
           href="/"
           data-testid="link-back"
-          className="text-xs tracking-widest transition-colors duration-150"
-          style={{ color: "#ff000066" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#ff0000")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#ff000066")}
+          style={{ color: "var(--text-muted)" }}
+          className="hover:text-foreground transition-colors"
         >
-          ← BACK
+          Home
         </Link>
-        <span style={{ color: "#ff000033" }}>|</span>
-        <h1 className="font-mono text-sm tracking-widest animate-red-pulse">
-          RESET PASS
+        <span style={{ color: "var(--text-muted)" }}>/</span>
+        <span style={{ color: "var(--red-accent)" }}>Reset Pass</span>
+      </nav>
+
+      {/* Page header */}
+      <div className="space-y-1 animate-fade-up">
+        <p className="text-xs font-mono tracking-widest" style={{ color: "var(--red-accent)" }}>
+          MODULE 02
+        </p>
+        <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>
+          Reset Pass
         </h1>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          Reset an Instagram password using a valid recovery link.
+        </p>
       </div>
 
-      {/* Panel */}
+      {/* Form card */}
       <div
-        className="p-6 space-y-5 animate-fade-in-up animate-border-glow"
+        className="p-6 space-y-5 animate-fade-up"
         style={{
-          border: "1px solid #ff000055",
-          background: "#0a0a0a",
-          animationDelay: "0.1s",
-          opacity: 0,
-          animationFillMode: "forwards",
+          border: "1px solid var(--line)",
+          borderRadius: "8px",
+          background: "var(--surface)",
+          animationDelay: "60ms",
         }}
       >
-        <p className="text-xs" style={{ color: "#ff000077" }}>
-          &gt; RESET INSTAGRAM PASSWORD VIA RECOVERY LINK
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {FIELDS.map((field) => (
             <FormField
               key={field.name}
@@ -139,46 +138,73 @@ export default function ResetPass() {
             />
           ))}
 
-          <SubmitButton loading={loading} />
+          <div className="pt-1">
+            <ActionButton loading={loading} />
+          </div>
         </form>
       </div>
 
       {/* Result */}
       {result && (
         <div
-          className="p-6 space-y-3 animate-fade-in-up"
+          className="p-6 animate-fade-up"
           style={{
-            border: result.success ? "1px solid #ff000088" : "1px solid #ff000044",
-            background: result.success ? "#ff000009" : "#0d0000",
-            boxShadow: result.success ? "0 0 20px #ff000033" : "none",
+            border: result.success
+              ? "1px solid var(--red-accent)"
+              : "1px solid var(--line)",
+            borderRadius: "8px",
+            background: "var(--surface)",
+            boxShadow: result.success ? "0 0 0 1px var(--red-glow), 0 4px 20px var(--red-glow)" : "none",
           }}
           data-testid="result-panel"
         >
-          <p className="text-xs mb-3" style={{ color: "#ff000077" }}>
-            &gt; RESULT:
-          </p>
+          <div className="flex items-center gap-2 mb-4">
+            <span
+              className="w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full"
+              style={{
+                background: result.success ? "var(--red-accent)" : "var(--line)",
+                color: result.success ? "#fff" : "var(--text-muted)",
+              }}
+            >
+              {result.success ? "✓" : "✗"}
+            </span>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: result.success ? "var(--text-primary)" : "var(--text-secondary)" }}
+            >
+              {result.success ? "Password Reset Successful" : "Operation Failed"}
+            </span>
+          </div>
+
           {result.success ? (
-            <div className="space-y-2">
-              <p className="text-xs tracking-widest" style={{ color: "#44ff44" }}>
-                ✓ PASSWORD RESET SUCCESSFUL
-              </p>
-              <div className="mt-3 p-4 space-y-2" style={{ border: "1px solid #ff000033", background: "#050505" }}>
-                <ResultRow label="USERNAME" value={`@${result.username}`} />
-                <ResultRow label="PASSWORD" value={result.password ?? ""} highlight />
+            <div
+              className="space-y-3 p-4"
+              style={{
+                background: "var(--surface-2)",
+                borderRadius: "6px",
+                border: "1px solid var(--line)",
+              }}
+            >
+              <ResultRow label="Username" value={`@${result.username}`} />
+              <div style={{ borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
+                <ResultRow label="New Password" value={result.password ?? ""} highlight />
               </div>
-              <p className="text-xs mt-2" style={{ color: "#444" }}>
-                SENT TO TELEGRAM ✓
+              <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+                ✓ Sent to Telegram
               </p>
             </div>
           ) : (
-            <div className="space-y-1">
-              <p className="text-xs tracking-widest" style={{ color: "#ff4444" }}>
-                ✗ OPERATION FAILED
-              </p>
-              <p className="text-xs font-mono mt-2" style={{ color: "#ff000077" }}>
-                {result.error}
-              </p>
-            </div>
+            <p
+              className="text-sm font-mono p-3"
+              style={{
+                color: "var(--text-secondary)",
+                background: "var(--surface-2)",
+                borderRadius: "4px",
+                border: "1px solid var(--line)",
+              }}
+            >
+              {result.error}
+            </p>
           )}
         </div>
       )}
@@ -198,12 +224,15 @@ function FormField({
   const [focused, setFocused] = useState(false);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-baseline gap-2">
-        <label className="text-xs tracking-widest" style={{ color: "#ffffff88" }}>
+        <label className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
           {field.label}
+          {field.required && (
+            <span className="ml-1" style={{ color: "var(--red-accent)" }}>*</span>
+          )}
         </label>
-        <span className="text-xs" style={{ color: "#ff000044" }}>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
           {field.hint}
         </span>
       </div>
@@ -216,19 +245,20 @@ function FormField({
         placeholder={field.placeholder}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="w-full font-mono text-sm p-3 transition-all duration-200"
+        className="w-full px-3 py-2.5 text-sm font-mono transition-all duration-200"
         style={{
-          border: focused ? "1px solid #ff000099" : "1px solid #ff000033",
-          background: "#050505",
-          color: "#ffffff",
-          boxShadow: focused ? "0 0 12px #ff000033, inset 0 0 8px #ff000011" : "none",
+          border: focused ? "1px solid var(--red-accent)" : "1px solid var(--line)",
+          borderRadius: "6px",
+          background: "var(--surface-2)",
+          color: "var(--text-primary)",
+          boxShadow: focused ? "0 0 0 3px var(--red-glow)" : "none",
         }}
       />
     </div>
   );
 }
 
-function SubmitButton({ loading }: { loading: boolean }) {
+function ActionButton({ loading }: { loading: boolean }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -236,41 +266,60 @@ function SubmitButton({ loading }: { loading: boolean }) {
       data-testid="button-submit"
       type="submit"
       disabled={loading}
-      className="w-full font-mono text-sm tracking-widest transition-all duration-200 p-4 mt-2"
+      className="w-full py-3 px-6 text-sm font-semibold transition-all duration-200"
       style={{
-        border: loading ? "1px solid #ff000033" : hovered ? "1px solid #ff0000" : "1px solid #ff000088",
-        color: loading ? "#ff000055" : hovered ? "#000000" : "#ff0000",
-        background: loading ? "transparent" : hovered ? "#ff0000" : "transparent",
-        boxShadow: hovered && !loading ? "0 0 20px #ff000077, inset 0 0 10px #ff000022" : "none",
+        borderRadius: "6px",
+        border: "1px solid var(--red-accent)",
+        background: loading
+          ? "transparent"
+          : hovered
+          ? "var(--red-accent)"
+          : "transparent",
+        color: loading
+          ? "var(--text-muted)"
+          : hovered
+          ? "#ffffff"
+          : "var(--red-accent)",
         cursor: loading ? "not-allowed" : "pointer",
-        textShadow: hovered && !loading ? "none" : "0 0 8px #ff000066",
+        boxShadow: hovered && !loading ? "0 0 16px var(--red-glow-strong)" : "none",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {loading ? (
         <span className="flex items-center justify-center gap-2">
-          <span className="animate-blink" style={{ color: "#ff0000" }}>■</span>
-          PROCESSING...
+          <span
+            className="inline-block w-3 h-3 border-2 rounded-full animate-spin"
+            style={{ borderColor: "var(--red-accent)", borderTopColor: "transparent" }}
+          />
+          Processing...
         </span>
       ) : (
-        "RESET PASSWORD"
+        "Reset Password"
       )}
     </button>
   );
 }
 
-function ResultRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function ResultRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
     <div className="flex items-center gap-4">
-      <span className="text-xs w-24 shrink-0" style={{ color: "#555" }}>
+      <span className="text-xs w-28 shrink-0" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>
       <span
         className="text-sm font-mono"
         style={{
-          color: highlight ? "#ff0000" : "#ffffff",
-          textShadow: highlight ? "0 0 8px #ff000066" : "none",
+          color: highlight ? "var(--red-accent)" : "var(--text-primary)",
+          textShadow: highlight ? "0 0 8px var(--red-glow-strong)" : "none",
         }}
       >
         {value}

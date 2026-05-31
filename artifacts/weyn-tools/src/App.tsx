@@ -3,17 +3,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/hooks/use-toast";
+import { ThemeProvider } from "@/hooks/use-theme";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import ResetLink from "@/pages/reset-link";
 import ResetPass from "@/pages/reset-pass";
+import Navbar from "@/components/Navbar";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: false,
-      refetchOnWindowFocus: false,
-    },
+    queries: { retry: false, refetchOnWindowFocus: false },
   },
 });
 
@@ -33,10 +32,18 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
+          <ThemeProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <div className="min-h-screen flex flex-col transition-colors duration-300" style={{ background: "var(--surface)" }}>
+                <div className="scanline-bar" />
+                <Navbar />
+                <main className="flex-1">
+                  <Router />
+                </main>
+              </div>
+            </WouterRouter>
+            <Toaster />
+          </ThemeProvider>
         </TooltipProvider>
       </ToastProvider>
     </QueryClientProvider>
