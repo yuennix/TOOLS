@@ -1,8 +1,10 @@
 import { Link } from "wouter";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Navbar() {
   const { theme, toggle } = useTheme();
+  const { session, logout } = useAuth();
 
   return (
     <header
@@ -14,8 +16,7 @@ export default function Navbar() {
       }}
     >
       <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link href={session ? "/" : "/access"} className="flex items-center gap-2 group">
           <span
             className="font-mono text-base font-bold tracking-widest animate-red-breathe select-none"
             style={{ letterSpacing: "0.22em" }}
@@ -30,8 +31,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span
             className="hidden sm:flex items-center gap-1.5 text-xs font-mono"
             style={{ color: "var(--text-muted)" }}
@@ -43,7 +43,24 @@ export default function Navbar() {
             ONLINE
           </span>
 
-          {/* Dark mode toggle */}
+          {session && (
+            <span className="hidden sm:block text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+              {session.name}
+            </span>
+          )}
+
+          {session && (
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-all duration-200 border rounded"
+              style={{ border: "1px solid var(--line)", color: "var(--text-secondary)", background: "transparent" }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+            >
+              LOGOUT
+            </button>
+          )}
+
           <button
             onClick={toggle}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono transition-all duration-200 border rounded"
