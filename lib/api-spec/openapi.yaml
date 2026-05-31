@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: WEYN Tools API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tools
+    description: WEYN Instagram Tools
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /reset-link:
+    post:
+      operationId: sendResetLinks
+      tags: [tools]
+      summary: Send Instagram recovery emails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetLinkInput"
+      responses:
+        "200":
+          description: Results for each email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetLinkResult"
+
+  /reset-pass:
+    post:
+      operationId: resetPassword
+      tags: [tools]
+      summary: Reset Instagram password via reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPassInput"
+      responses:
+        "200":
+          description: Password reset result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPassResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ResetLinkInput:
+      type: object
+      required:
+        - emails
+      properties:
+        emails:
+          type: array
+          items:
+            type: string
+
+    EmailResult:
+      type: object
+      required:
+        - email
+        - success
+        - response
+      properties:
+        email:
+          type: string
+        success:
+          type: boolean
+        response:
+          type: string
+
+    ResetLinkResult:
+      type: object
+      required:
+        - results
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailResult"
+
+    ResetPassInput:
+      type: object
+      required:
+        - resetLink
+        - email
+        - chatId
+        - botToken
+      properties:
+        resetLink:
+          type: string
+        email:
+          type: string
+        chatId:
+          type: string
+        botToken:
+          type: string
+        customPassword:
+          type: ["string", "null"]
+
+    ResetPassResult:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
