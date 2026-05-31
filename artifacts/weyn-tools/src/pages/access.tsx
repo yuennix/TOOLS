@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +20,18 @@ export default function Access() {
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
             Enter your access key or generate a new one below.
           </p>
+        </div>
+
+        <div className="animate-fade-up text-center" style={{ animationDelay: "120ms" }}>
+          <Link
+            href="/admin"
+            className="text-xs font-mono tracking-widest transition-colors"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--red-accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+          >
+            ADMIN PANEL →
+          </Link>
         </div>
 
         <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
