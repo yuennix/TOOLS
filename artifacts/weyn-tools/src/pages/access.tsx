@@ -35,7 +35,7 @@ export default function Access() {
       });
       const data = await res.json();
       if (data.valid) {
-        sessionStorage.setItem("weyn-access", "1");
+        localStorage.setItem("weyn-access", "1");
         if (data.expiresAt) {
           localStorage.setItem("weyn-key-expiry", data.expiresAt);
         } else {

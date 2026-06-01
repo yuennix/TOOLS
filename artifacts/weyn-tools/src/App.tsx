@@ -20,14 +20,14 @@ const queryClient = new QueryClient({
 });
 
 function isAccessValid() {
-  if (sessionStorage.getItem("weyn-access") !== "1") return false;
+  if (localStorage.getItem("weyn-access") !== "1") return false;
   const expiry = localStorage.getItem("weyn-key-expiry");
   if (expiry && new Date() > new Date(expiry)) return false;
   return true;
 }
 
 function clearAccess() {
-  sessionStorage.removeItem("weyn-access");
+  localStorage.removeItem("weyn-access");
   localStorage.removeItem("weyn-key-expiry");
 }
 

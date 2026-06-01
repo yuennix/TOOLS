@@ -50,7 +50,7 @@ export default function Navbar() {
     >
       <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href={sessionStorage.getItem("weyn-access") === "1" ? "/" : "/access"} className="flex items-center gap-2">
+        <Link href={localStorage.getItem("weyn-access") === "1" ? "/" : "/access"} className="flex items-center gap-2">
           <span
             className="font-mono text-base font-bold tracking-widest animate-red-breathe select-none"
             style={{ letterSpacing: "0.22em" }}
