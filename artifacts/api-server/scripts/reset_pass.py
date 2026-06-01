@@ -68,11 +68,9 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass = generate_device_info(custom_password)
 
-        # Match original resetpass.py token extraction (split on ":" not "&")
         uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
         token = reset_link.split("&token=")[1].split(":")[0]
 
-        # Step 1: initiate password reset
         url = "https://i.instagram.com/api/v1/accounts/password_reset/"
         data = {
             "source": "one_click_login_email",
@@ -93,7 +91,6 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         nonce_code = resp_json.get("nonce_code")
         challenge_context = resp_json.get("challenge_context")
 
-        # Step 2: get challenge context
         url2 = "https://i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/"
         data2 = {
             "user_id": str(user_id),
@@ -112,16 +109,20 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             .split('", (bk.action.bool.Const, false)))')[0]
         )
 
-        # Step 3: submit new password
+        # Exact data3 structure from resetpass.py
         data3 = {
             "is_caa": "False",
             "source": "",
             "uidb36": "",
+            "error_state": {"type_name": "str", "index": 0, "state_id": 1048583541},
             "afv": "",
             "cni": str(cni),
             "token": "",
             "has_follow_up_screens": "0",
-            "bk_client_context": '{"bloks_version":"e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd","styles_id":"instagram"}',
+            "bk_client_context": {
+                "bloks_version": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
+                "styles_id": "instagram"
+            },
             "challenge_context": challenge_context_final,
             "bloks_versioning_id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
             "enc_new_password1": PASSWORD,
@@ -129,10 +130,8 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         }
         r3 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
 
-        # Check if step 3 actually succeeded
-        r3_text = r3.text
-        if r3.status_code not in (200, 201) or "error" in r3_text.lower() and "success" not in r3_text.lower():
-            return {"success": False, "error": f"Step 3 (set password) failed [{r3.status_code}]: {r3_text[:400]}"}
+        if r3.status_code >= 400:
+            return {"success": False, "error": f"Step 3 failed [{r3.status_code}]: {r3.text[:400]}"}
 
         username = id_user(str(user_id), USER_AGENT)
 
