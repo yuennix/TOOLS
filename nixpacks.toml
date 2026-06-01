@@ -3,13 +3,8 @@ nixPkgs = ["python312"]
 
 [phases.install]
 cmds = [
-  "npm install -g pnpm",
-  "pnpm install --frozen-lockfile",
-  "python3 -m ensurepip --upgrade && python3 -m pip install 'httpx[http2]' requests pyfiglet"
+  "python3 -m ensurepip --upgrade && python3 -m pip install httpx[http2] requests pyfiglet rich"
 ]
 
-[phases.build]
-cmds = ["pnpm run build"]
-
 [start]
-cmd = "node artifacts/api-server/dist/index.js"
+cmd = "python3 weyn.py"
