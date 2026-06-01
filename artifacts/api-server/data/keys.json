@@ -15,10 +15,10 @@
       "name": "gg",
       "key": "WEYN-8MOM-2UHD-CF1H",
       "createdAt": "2026-06-01T07:04:57.417Z",
-      "expiresAt": null,
-      "active": false,
-      "used": false,
-      "usedAt": null
+      "expiresAt": "2026-06-01T08:05:11.612Z",
+      "active": true,
+      "used": true,
+      "usedAt": "2026-06-01T07:05:20.900Z"
     }
   ]
 }
