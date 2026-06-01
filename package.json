@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "concurrently \"pnpm --filter @workspace/api-server run dev\" \"pnpm --filter @workspace/weyn-tools run dev\"",
-    "build": "pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build"
+    "build": "pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/",
+    "start": "NODE_ENV=production node artifacts/api-server/dist/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
