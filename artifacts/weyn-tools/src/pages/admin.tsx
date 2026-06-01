@@ -1,418 +1,374 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-const ADMIN_TOKEN_KEY = "weyn_admin_token";
-
-function getToken() { return localStorage.getItem(ADMIN_TOKEN_KEY); }
-function setToken(t: string) { localStorage.setItem(ADMIN_TOKEN_KEY, t); }
-function clearToken() { localStorage.removeItem(ADMIN_TOKEN_KEY); }
-
-type KeyStatus = "pending" | "approved" | "used" | "expired";
-
-interface AccessKey {
+interface Key {
   id: string;
-  name: string;
   key: string;
-  status: KeyStatus;
-  expiresAt: number | null;
-  createdAt: number;
-  approvedAt: number | null;
-  usedAt: number | null;
+  createdAt: string;
+  expiresAt: string | null;
+  used: boolean;
+  usedAt: string | null;
 }
 
-const EXPIRY_OPTIONS = [
+const EXPIRY_PRESETS = [
   { label: "1 Hour", hours: 1 },
   { label: "6 Hours", hours: 6 },
-  { label: "12 Hours", hours: 12 },
   { label: "24 Hours", hours: 24 },
-  { label: "3 Days", hours: 72 },
   { label: "7 Days", hours: 168 },
   { label: "30 Days", hours: 720 },
+  { label: "No Expiry", hours: null },
 ];
 
-const STATUS_COLOR: Record<KeyStatus, string> = {
-  pending: "#f59e0b",
-  approved: "#22c55e",
-  used: "var(--text-muted)",
-  expired: "var(--text-muted)",
-};
-
-export default function Admin() {
-  const [token, setTokenState] = useState<string | null>(getToken);
-  if (!token) return <AdminLogin onLogin={(t) => { setToken(t); setTokenState(t); }} />;
-  return <AdminPanel token={token} onLogout={() => { clearToken(); setTokenState(null); }} />;
+function adminHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "x-admin-password": "yuennix",
+  };
 }
 
-function AdminLogin({ onLogin }: { onLogin: (token: string) => void }) {
-  const { toast } = useToast();
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [hovered, setHovered] = useState(false);
+function keyStatus(k: Key): { label: string; color: string } {
+  if (k.used) return { label: "USED", color: "#888" };
+  if (k.expiresAt && new Date() > new Date(k.expiresAt))
+    return { label: "EXPIRED", color: "#ef4444" };
+  return { label: "ACTIVE", color: "#22c55e" };
+}
 
-  async function handleSubmit(e: React.FormEvent) {
+function fmt(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString();
+}
+
+export default function Admin() {
+  const { toast } = useToast();
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("weyn-admin") === "1");
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const [keys, setKeys] = useState<Key[]>([]);
+  const [keysLoading, setKeysLoading] = useState(false);
+
+  const [genLoading, setGenLoading] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const [customDate, setCustomDate] = useState("");
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const loadKeys = useCallback(async () => {
+    setKeysLoading(true);
+    try {
+      const res = await fetch("/api/admin/keys", { headers: adminHeaders() });
+      const data = await res.json();
+      setKeys((data.keys ?? []).slice().reverse());
+    } catch {
+      toast({ title: "Error", description: "Failed to load keys", variant: "destructive" });
+    } finally {
+      setKeysLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (authed) loadKeys();
+  }, [authed, loadKeys]);
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setPwLoading(true);
+    setPwError("");
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password: pw }),
       });
       const data = await res.json();
-      if (data.token) {
-        onLogin(data.token);
+      if (data.success) {
+        sessionStorage.setItem("weyn-admin", "1");
+        setAuthed(true);
       } else {
-        toast({ title: "Access denied", description: "Wrong password", variant: "destructive" });
+        setPwError(data.error ?? "Wrong password");
       }
     } catch {
-      toast({ title: "Error", description: "Could not connect", variant: "destructive" });
+      setPwError("Connection error");
     } finally {
-      setLoading(false);
+      setPwLoading(false);
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6 animate-fade-up">
-        <div className="text-center space-y-1">
-          <p className="text-xs font-mono tracking-widest" style={{ color: "var(--red-accent)" }}>ADMIN PANEL</p>
-          <h1 className="text-2xl font-bold font-mono" style={{ color: "var(--text-primary)" }}>WEYN / ADMIN</h1>
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 space-y-4"
-          style={{ border: "1px solid var(--line)", borderRadius: "8px", background: "var(--surface)" }}
-        >
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter admin password"
-              autoFocus
-              className="w-full px-3 py-2.5 text-sm font-mono transition-all duration-200"
-              style={{ border: "1px solid var(--line)", borderRadius: "6px", background: "var(--surface-2)", color: "var(--text-primary)" }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--red-glow)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "none"; }}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 text-sm font-semibold transition-all duration-200"
-            style={{
-              borderRadius: "6px",
-              border: "1px solid var(--red-accent)",
-              background: hovered && !loading ? "var(--red-accent)" : "transparent",
-              color: hovered && !loading ? "#fff" : loading ? "var(--text-muted)" : "var(--red-accent)",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-          >
-            {loading ? "Authenticating..." : "Login"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
+  async function generateKey() {
+    let expiresAt: string | null = null;
 
-function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }) {
-  const { toast } = useToast();
-  const [keys, setKeys] = useState<AccessKey[]>([]);
-  const [filter, setFilter] = useState<KeyStatus | "all">("all");
-  const [loading, setLoading] = useState(true);
-  const [approveTarget, setApproveTarget] = useState<AccessKey | null>(null);
+    if (selectedPreset !== null) {
+      const preset = EXPIRY_PRESETS[selectedPreset];
+      if (preset.hours !== null) {
+        expiresAt = new Date(Date.now() + preset.hours * 3600 * 1000).toISOString();
+      }
+    } else if (customDate) {
+      expiresAt = new Date(customDate).toISOString();
+    }
 
-  const fetchKeys = useCallback(async () => {
+    setGenLoading(true);
+    setNewKey(null);
     try {
-      const res = await fetch("/api/admin/keys", { headers: { Authorization: `Bearer ${token}` } });
-      if (res.status === 401) { onLogout(); return; }
+      const res = await fetch("/api/admin/keys/generate", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify({ expiresAt }),
+      });
       const data = await res.json();
-      setKeys(data.keys ?? []);
+      setNewKey(data.key.key);
+      await loadKeys();
     } catch {
-      toast({ title: "Error", description: "Failed to load keys", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to generate key", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setGenLoading(false);
     }
-  }, [token, onLogout, toast]);
-
-  useEffect(() => { fetchKeys(); }, [fetchKeys]);
-
-  async function handleDelete(id: string) {
-    await fetch(`/api/admin/keys/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-    toast({ title: "Deleted", description: "Key removed" });
-    fetchKeys();
   }
 
-  async function handleApprove(id: string, hours: number) {
-    const res = await fetch(`/api/admin/keys/${id}/approve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ expiresInHours: hours }),
+  async function deleteKey(id: string) {
+    try {
+      await fetch(`/api/admin/keys/${id}`, { method: "DELETE", headers: adminHeaders() });
+      setKeys((prev) => prev.filter((k) => k.id !== id));
+      toast({ title: "Deleted", description: "Key removed" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+    }
+  }
+
+  function copyKey(k: string) {
+    navigator.clipboard.writeText(k).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
-    if (res.ok) {
-      toast({ title: "Approved", description: `Key approved, expires in ${hours}h` });
-      setApproveTarget(null);
-      fetchKeys();
-    } else {
-      toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
-    }
   }
 
-  const filtered = filter === "all" ? keys : keys.filter((k) => k.status === filter);
-  const counts = {
-    all: keys.length,
-    pending: keys.filter((k) => k.status === "pending").length,
-    approved: keys.filter((k) => k.status === "approved").length,
-    used: keys.filter((k) => k.status === "used").length,
-    expired: keys.filter((k) => k.status === "expired").length,
-  };
+  if (!authed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--surface)" }}>
+        <div className="w-full max-w-xs space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="font-mono text-2xl font-bold tracking-widest animate-red-breathe">ADMIN</h1>
+            <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>WEYN TOOLS — RESTRICTED</p>
+          </div>
+          <div className="p-6 space-y-4" style={{ border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Password</label>
+                <input
+                  type="password"
+                  value={pw}
+                  onChange={(e) => { setPw(e.target.value); setPwError(""); }}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2.5 text-sm font-mono transition-all duration-200"
+                  style={{
+                    border: pwError ? "1px solid #ef4444" : "1px solid var(--line)",
+                    borderRadius: "6px",
+                    background: "var(--surface-2)",
+                    color: "var(--text-primary)",
+                  }}
+                />
+                {pwError && <p className="text-xs" style={{ color: "#ef4444" }}>✗ {pwError}</p>}
+              </div>
+              <LoginBtn loading={pwLoading} />
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-      {approveTarget && (
-        <ApproveModal
-          target={approveTarget}
-          onApprove={(hours) => handleApprove(approveTarget.id, hours)}
-          onClose={() => setApproveTarget(null)}
-        />
-      )}
+    <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
 
-      <div className="flex items-center justify-between animate-fade-up">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-mono tracking-widest" style={{ color: "var(--red-accent)" }}>ADMIN PANEL</p>
-          <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Access Keys</h1>
+          <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Key Management</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/access"
-            className="text-xs font-mono px-3 py-1.5 transition-colors flex items-center gap-1.5"
-            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--text-muted)", background: "transparent" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-            ACCESS PAGE
-          </Link>
-          <button
-            onClick={onLogout}
-            className="text-xs font-mono px-3 py-1.5 transition-colors"
-            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--text-muted)", background: "transparent", cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-          >
-            LOGOUT
-          </button>
-        </div>
+        <button
+          onClick={() => { sessionStorage.removeItem("weyn-admin"); setAuthed(false); }}
+          className="text-xs font-mono px-3 py-1.5 border transition-colors"
+          style={{ border: "1px solid var(--line)", color: "var(--text-muted)", borderRadius: "4px" }}
+        >
+          LOGOUT
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-up">
-        {(["pending", "approved", "used", "expired"] as KeyStatus[]).map((s) => (
-          <div key={s} className="p-4 space-y-1" style={{ border: "1px solid var(--line)", borderRadius: "8px", background: "var(--surface)" }}>
-            <p className="text-2xl font-bold font-mono" style={{ color: STATUS_COLOR[s] }}>{counts[s]}</p>
-            <p className="text-xs font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{s}</p>
-          </div>
-        ))}
-      </div>
+      {/* Generate key */}
+      <div className="p-6 space-y-4" style={{ border: "1px solid var(--line)", borderRadius: "8px", background: "var(--surface)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Generate New Key</p>
 
-      <div className="space-y-4 animate-fade-up">
-        <div className="flex gap-2 flex-wrap">
-          {(["all", "pending", "approved", "used", "expired"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-3 py-1 text-xs font-mono uppercase tracking-widest rounded transition-all"
-              style={{
-                border: `1px solid ${filter === f ? "var(--red-accent)" : "var(--line)"}`,
-                background: filter === f ? "var(--red-accent)" : "transparent",
-                color: filter === f ? "#fff" : "var(--text-muted)",
-                cursor: "pointer",
-              }}
-            >
-              {f} {f !== "all" && `(${counts[f]})`}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <p className="text-sm font-mono" style={{ color: "var(--text-muted)" }}>Loading...</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm font-mono" style={{ color: "var(--text-muted)" }}>No keys found.</p>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((k) => (
-              <KeyCard
-                key={k.id}
-                accessKey={k}
-                onApprove={() => setApproveTarget(k)}
-                onDelete={() => handleDelete(k.id)}
-              />
+        <div className="space-y-3">
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Expiration</p>
+          <div className="flex flex-wrap gap-2">
+            {EXPIRY_PRESETS.map((p, i) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => { setSelectedPreset(i); setCustomDate(""); }}
+                className="px-3 py-1 text-xs font-mono transition-all duration-150"
+                style={{
+                  border: `1px solid ${selectedPreset === i ? "var(--red-accent)" : "var(--line)"}`,
+                  borderRadius: "4px",
+                  background: selectedPreset === i ? "var(--red-glow)" : "transparent",
+                  color: selectedPreset === i ? "var(--red-accent)" : "var(--text-secondary)",
+                }}
+              >
+                {p.label}
+              </button>
             ))}
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-function KeyCard({ accessKey: k, onApprove, onDelete }: { accessKey: AccessKey; onApprove: () => void; onDelete: () => void }) {
-  const now = Date.now();
-  const expiryLabel = k.expiresAt
-    ? k.expiresAt < now
-      ? "Expired"
-      : `Expires ${new Date(k.expiresAt).toLocaleString()}`
-    : "—";
-
-  return (
-    <div
-      className="p-4 flex flex-col sm:flex-row sm:items-center gap-3"
-      style={{ border: "1px solid var(--line)", borderRadius: "8px", background: "var(--surface)" }}
-    >
-      <div className="flex-1 space-y-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{k.name}</span>
-          <span
-            className="text-xs font-mono px-1.5 py-0.5 rounded"
-            style={{ background: "var(--surface-2)", color: STATUS_COLOR[k.status], border: `1px solid ${STATUS_COLOR[k.status]}` }}
-          >
-            {k.status.toUpperCase()}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>or custom date:</span>
+            <input
+              type="datetime-local"
+              value={customDate}
+              onChange={(e) => { setCustomDate(e.target.value); setSelectedPreset(null); }}
+              className="px-2 py-1 text-xs font-mono transition-all"
+              style={{
+                border: "1px solid var(--line)",
+                borderRadius: "4px",
+                background: "var(--surface-2)",
+                color: "var(--text-primary)",
+                colorScheme: "dark",
+              }}
+            />
+          </div>
         </div>
-        <p className="text-xs font-mono truncate" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>{k.key}</p>
-        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          Created {new Date(k.createdAt).toLocaleString()} · {expiryLabel}
-        </p>
-      </div>
-      <div className="flex gap-2 shrink-0">
-        {k.status === "pending" && (
-          <ActionBtn label="APPROVE" accent onClick={onApprove} />
+
+        <GenBtn loading={genLoading} onClick={generateKey} disabled={selectedPreset === null && !customDate} />
+
+        {newKey && (
+          <div
+            className="flex items-center justify-between p-3 mt-2"
+            style={{ border: "1px solid var(--red-accent)", borderRadius: "6px", background: "var(--red-glow)" }}
+          >
+            <span className="font-mono text-sm tracking-widest" style={{ color: "var(--red-accent)" }}>{newKey}</span>
+            <button
+              onClick={() => copyKey(newKey)}
+              className="text-xs font-mono px-2 py-1 transition-all"
+              style={{
+                border: "1px solid var(--red-accent)",
+                borderRadius: "4px",
+                color: "var(--red-accent)",
+                background: "transparent",
+              }}
+            >
+              {copied ? "COPIED!" : "COPY"}
+            </button>
+          </div>
         )}
-        <ActionBtn label="DELETE" onClick={onDelete} />
+      </div>
+
+      {/* Key list */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            All Keys <span className="text-xs font-normal ml-1" style={{ color: "var(--text-muted)" }}>({keys.length})</span>
+          </p>
+          <button onClick={loadKeys} className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+            {keysLoading ? "Loading..." : "↻ Refresh"}
+          </button>
+        </div>
+
+        {keys.length === 0 && !keysLoading && (
+          <p className="text-sm text-center py-8" style={{ color: "var(--text-muted)" }}>No keys generated yet</p>
+        )}
+
+        <div className="space-y-2">
+          {keys.map((k) => {
+            const status = keyStatus(k);
+            return (
+              <div
+                key={k.id}
+                className="flex items-center gap-3 p-3"
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: "6px",
+                  background: "var(--surface)",
+                  opacity: k.used ? 0.5 : 1,
+                }}
+              >
+                <span
+                  className="text-xs font-mono shrink-0"
+                  style={{ color: status.color }}
+                >
+                  ●
+                </span>
+                <span className="font-mono text-xs tracking-wider flex-1 min-w-0 truncate" style={{ color: "var(--text-primary)" }}>
+                  {k.key}
+                </span>
+                <div className="hidden sm:flex flex-col items-end text-xs shrink-0" style={{ color: "var(--text-muted)" }}>
+                  <span style={{ color: status.color }} className="font-mono">{status.label}</span>
+                  <span>{k.expiresAt ? `Exp: ${fmt(k.expiresAt)}` : "No expiry"}</span>
+                </div>
+                <button
+                  onClick={() => copyKey(k.key)}
+                  className="text-xs font-mono px-2 py-0.5 shrink-0 transition-all"
+                  style={{ border: "1px solid var(--line)", borderRadius: "3px", color: "var(--text-muted)" }}
+                >
+                  COPY
+                </button>
+                <button
+                  onClick={() => deleteKey(k.id)}
+                  className="text-xs font-mono px-2 py-0.5 shrink-0 transition-all"
+                  style={{ border: "1px solid #ef444433", borderRadius: "3px", color: "#ef4444" }}
+                >
+                  DEL
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function ActionBtn({ label, accent, onClick }: { label: string; accent?: boolean; onClick: () => void }) {
+function LoginBtn({ loading }: { loading: boolean }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
-      onClick={onClick}
-      className="px-3 py-1.5 text-xs font-mono transition-all duration-200"
+      type="submit"
+      disabled={loading}
+      className="w-full py-2.5 text-sm font-semibold transition-all duration-200"
       style={{
-        border: `1px solid ${accent ? "var(--red-accent)" : "var(--line)"}`,
-        borderRadius: "4px",
-        background: hovered ? (accent ? "var(--red-accent)" : "var(--surface-2)") : "transparent",
-        color: hovered ? (accent ? "#fff" : "var(--text-primary)") : accent ? "var(--red-accent)" : "var(--text-muted)",
-        cursor: "pointer",
+        borderRadius: "6px",
+        border: "1px solid var(--red-accent)",
+        background: loading ? "transparent" : hovered ? "var(--red-accent)" : "transparent",
+        color: loading ? "var(--text-muted)" : hovered ? "#fff" : "var(--red-accent)",
+        cursor: loading ? "not-allowed" : "pointer",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {label}
+      {loading ? "Verifying..." : "Login"}
     </button>
   );
 }
 
-function ApproveModal({ target, onApprove, onClose }: { target: AccessKey; onApprove: (hours: number) => void; onClose: () => void }) {
-  const [selected, setSelected] = useState<number>(24);
-  const [custom, setCustom] = useState("");
-  const [useCustom, setUseCustom] = useState(false);
-
-  function confirm() {
-    const hours = useCustom ? parseFloat(custom) : selected;
-    if (!hours || hours <= 0) return;
-    onApprove(hours);
-  }
-
+function GenBtn({ loading, onClick, disabled }: { loading: boolean; onClick: () => void; disabled: boolean }) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)" }}
-      onClick={onClose}
+    <button
+      type="button"
+      disabled={loading || disabled}
+      onClick={onClick}
+      className="px-5 py-2 text-sm font-semibold transition-all duration-200"
+      style={{
+        borderRadius: "6px",
+        border: "1px solid var(--red-accent)",
+        background: disabled ? "transparent" : loading ? "transparent" : hovered ? "var(--red-accent)" : "transparent",
+        color: disabled ? "var(--text-muted)" : loading ? "var(--text-muted)" : hovered ? "#fff" : "var(--red-accent)",
+        cursor: loading || disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div
-        className="w-full max-w-sm p-6 space-y-5"
-        style={{ border: "1px solid var(--red-accent)", borderRadius: "10px", background: "var(--surface)", boxShadow: "0 0 32px var(--red-glow)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div>
-          <p className="text-xs font-mono tracking-widest" style={{ color: "var(--red-accent)" }}>APPROVE KEY</p>
-          <p className="text-base font-semibold mt-1" style={{ color: "var(--text-primary)" }}>{target.name}</p>
-          <p className="text-xs font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>{target.key}</p>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Expires after</p>
-          <div className="grid grid-cols-3 gap-2">
-            {EXPIRY_OPTIONS.map((opt) => (
-              <button
-                key={opt.hours}
-                onClick={() => { setSelected(opt.hours); setUseCustom(false); }}
-                className="py-2 text-xs font-mono rounded transition-all"
-                style={{
-                  border: `1px solid ${!useCustom && selected === opt.hours ? "var(--red-accent)" : "var(--line)"}`,
-                  background: !useCustom && selected === opt.hours ? "var(--red-accent)" : "transparent",
-                  color: !useCustom && selected === opt.hours ? "#fff" : "var(--text-secondary)",
-                  cursor: "pointer",
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <button
-              onClick={() => setUseCustom(true)}
-              className="py-2 text-xs font-mono rounded transition-all"
-              style={{
-                border: `1px solid ${useCustom ? "var(--red-accent)" : "var(--line)"}`,
-                background: useCustom ? "var(--red-accent)" : "transparent",
-                color: useCustom ? "#fff" : "var(--text-secondary)",
-                cursor: "pointer",
-              }}
-            >
-              Custom
-            </button>
-          </div>
-          {useCustom && (
-            <input
-              type="number"
-              min="0.1"
-              step="0.5"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder="Hours (e.g. 48)"
-              autoFocus
-              className="w-full px-3 py-2 text-sm font-mono"
-              style={{ border: "1px solid var(--red-accent)", borderRadius: "6px", background: "var(--surface-2)", color: "var(--text-primary)" }}
-            />
-          )}
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-mono transition-colors"
-            style={{ border: "1px solid var(--line)", borderRadius: "6px", background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirm}
-            className="flex-1 py-2.5 text-sm font-semibold transition-all"
-            style={{ border: "1px solid var(--red-accent)", borderRadius: "6px", background: "var(--red-accent)", color: "#fff", cursor: "pointer" }}
-          >
-            Approve
-          </button>
-        </div>
-      </div>
-    </div>
+      {loading ? "Generating..." : "Generate Key"}
+    </button>
   );
 }

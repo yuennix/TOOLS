@@ -24,57 +24,40 @@ const TOOLS = [
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 60);
-    return () => clearTimeout(t);
-  }, []);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-16 space-y-16">
+    <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
 
       {/* Hero */}
       <section
-        className="text-center space-y-6"
+        className="text-center space-y-4"
         style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease" }}
       >
-        <div className="space-y-3">
-          <p
-            className="text-xs font-mono tracking-[0.3em] uppercase"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Instagram Recovery Suite
-          </p>
-          <h1
-            className="font-mono text-5xl sm:text-6xl font-bold tracking-widest animate-red-breathe"
-            style={{ letterSpacing: "0.18em" }}
-          >
-            WEYN
-          </h1>
-          <p
-            className="text-sm max-w-md mx-auto"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Professional toolset for Instagram account recovery operations.
-            Built for speed and reliability.
-          </p>
-        </div>
+        <p className="text-xs font-mono tracking-[0.3em] uppercase" style={{ color: "var(--text-muted)" }}>
+          Instagram Recovery Suite
+        </p>
+        <h1
+          className="font-mono text-4xl sm:text-5xl font-bold tracking-widest animate-red-breathe"
+          style={{ letterSpacing: "0.18em" }}
+        >
+          WEYN
+        </h1>
+        <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--text-secondary)" }}>
+          Professional toolset for Instagram account recovery operations.
+        </p>
 
-        {/* Stats bar */}
+        {/* Status bar */}
         <div
-          className="inline-flex items-center gap-6 px-6 py-3 border text-xs font-mono"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--surface-2)",
-            borderRadius: "4px",
-          }}
+          className="inline-flex items-center gap-5 px-5 py-2.5 border text-xs font-mono mx-auto"
+          style={{ border: "1px solid var(--line)", background: "var(--surface-2)", borderRadius: "4px" }}
         >
           {[
             { label: "STATUS", val: "ONLINE", color: "#22c55e" },
             { label: "TOOLS", val: "02", color: "var(--red-accent)" },
             { label: "ENGINE", val: "PYTHON", color: "var(--text-secondary)" },
           ].map((s) => (
-            <div key={s.label} className="flex items-center gap-2">
+            <div key={s.label} className="flex items-center gap-1.5">
               <span style={{ color: "var(--text-muted)" }}>{s.label}</span>
               <span style={{ color: s.color, fontWeight: 600 }}>{s.val}</span>
             </div>
@@ -83,20 +66,14 @@ export default function Home() {
       </section>
 
       {/* Divider */}
-      <div
-        className="h-px w-full"
-        style={{ background: "linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent)" }}
-      />
+      <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent)" }} />
 
-      {/* Tool cards */}
-      <section className="space-y-2">
-        <p
-          className="text-xs font-mono tracking-widest"
-          style={{ color: "var(--text-muted)" }}
-        >
+      {/* Tool cards — compact */}
+      <section className="space-y-3">
+        <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>
           SELECT MODULE
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="grid sm:grid-cols-2 gap-3">
           {TOOLS.map((tool, i) => (
             <ToolCard key={tool.id} tool={tool} delay={i * 80} />
           ))}
@@ -104,103 +81,68 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <div
-        className="text-center text-xs font-mono"
-        style={{ color: "var(--text-muted)" }}
-      >
-        <span>BY </span>
-        <span style={{ color: "var(--red-accent)" }}>@jinbelowg</span>
-        <span className="mx-3" style={{ color: "var(--line)" }}>·</span>
-        <span>USE RESPONSIBLY</span>
+      <div className="text-center text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+        BY <span style={{ color: "var(--red-accent)" }}>@jinbelowg</span>
+        <span className="mx-2" style={{ color: "var(--line)" }}>·</span>
+        USE RESPONSIBLY
       </div>
     </div>
   );
 }
 
-function ToolCard({
-  tool,
-  delay,
-}: {
-  tool: (typeof TOOLS)[number];
-  delay: number;
-}) {
+function ToolCard({ tool, delay }: { tool: (typeof TOOLS)[number]; delay: number }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <Link
       href={tool.href}
       data-testid={tool.testId}
-      className="flex items-center gap-3 animate-fade-up"
+      className="block transition-all duration-200 animate-fade-up"
       style={{
         animationDelay: `${delay}ms`,
         border: hovered ? "1px solid var(--red-accent)" : "1px solid var(--line)",
         background: hovered ? "var(--surface-2)" : "var(--surface)",
         borderRadius: "6px",
-        padding: "10px 12px",
-        boxShadow: hovered ? "0 0 0 1px var(--red-glow)" : "none",
+        padding: "14px 16px",
+        boxShadow: hovered ? "0 0 0 1px var(--red-glow), 0 2px 16px var(--red-glow)" : "none",
         cursor: "pointer",
         textDecoration: "none",
-        transition: "all 0.2s",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* ID badge */}
-      <div
-        className="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-xs font-bold"
-        style={{
-          border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
-          color: hovered ? "var(--red-accent)" : "var(--text-muted)",
-          background: hovered ? "var(--red-glow)" : "transparent",
-          borderRadius: "4px",
-          transition: "all 0.2s",
-        }}
-      >
-        {tool.id}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <p
-          className="text-sm font-semibold leading-tight"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {tool.title}
-        </p>
-        <p
-          className="text-xs font-mono truncate"
-          style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}
-        >
-          {tool.subtitle}
-        </p>
-      </div>
-
-      {/* Tag + arrow */}
-      <div className="shrink-0 flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="w-6 h-6 flex items-center justify-center font-mono text-xs border"
+            style={{
+              border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
+              color: hovered ? "var(--red-accent)" : "var(--text-muted)",
+              borderRadius: "3px",
+              transition: "all 0.2s",
+            }}
+          >
+            {tool.id}
+          </span>
+          <span className="text-xs font-mono tracking-wider" style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}>
+            {tool.subtitle}
+          </span>
+        </div>
         <span
           className="text-xs font-mono px-1.5 py-0.5"
-          style={{
-            border: "1px solid var(--line)",
-            color: "var(--text-muted)",
-            borderRadius: "3px",
-            background: "var(--surface-2)",
-          }}
+          style={{ border: "1px solid var(--line)", color: "var(--text-muted)", borderRadius: "3px", background: "var(--surface-2)" }}
         >
           {tool.tag}
         </span>
-        <svg
-          width="11"
-          height="11"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          style={{
-            color: hovered ? "var(--red-accent)" : "var(--text-muted)",
-            transform: hovered ? "translateX(2px)" : "none",
-            transition: "all 0.2s",
-          }}
-        >
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{tool.title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)", lineHeight: "1.4" }}>{tool.desc}</p>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          style={{ color: hovered ? "var(--red-accent)" : "var(--line)", flexShrink: 0, marginLeft: "12px", transform: hovered ? "translateX(2px)" : "none", transition: "all 0.2s" }}>
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </div>
