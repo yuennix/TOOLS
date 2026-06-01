@@ -146,6 +146,15 @@ function GenerateKeyForm() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState<{ key: string; name: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (!generated) return;
+    navigator.clipboard.writeText(generated.key).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -186,7 +195,7 @@ function GenerateKeyForm() {
           </p>
         </div>
         <div
-          className="p-4 rounded font-mono text-base tracking-widest text-center select-all"
+          className="relative rounded font-mono text-base tracking-widest text-center select-all"
           style={{
             background: "var(--surface-2)",
             border: "1px solid var(--red-accent)",
@@ -195,7 +204,31 @@ function GenerateKeyForm() {
             letterSpacing: "0.15em",
           }}
         >
-          {generated.key}
+          <div className="py-4 px-12">{generated.key}</div>
+          <button
+            onClick={handleCopy}
+            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 text-xs font-mono transition-all duration-200"
+            style={{
+              border: "1px solid var(--red-accent)",
+              borderRadius: "4px",
+              background: copied ? "var(--red-accent)" : "transparent",
+              color: copied ? "#fff" : "var(--red-accent)",
+              cursor: "pointer",
+            }}
+            title="Copy key"
+          >
+            {copied ? (
+              <>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                OK
+              </>
+            ) : (
+              <>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                COPY
+              </>
+            )}
+          </button>
         </div>
         <div
           className="flex items-start gap-2 p-3 rounded text-xs font-mono"
