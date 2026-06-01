@@ -1,2 +1,3 @@
 httpx[http2]
 h2
+requests
