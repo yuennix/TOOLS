@@ -1,7 +1,7 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "deploy": {
-    "buildCommand": "pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/",
+    "buildCommand": "npm install -g pnpm && pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/",
     "startCommand": "node artifacts/api-server/dist/index.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
