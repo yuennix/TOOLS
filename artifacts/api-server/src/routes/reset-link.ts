@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { SendResetLinksBody } from "@workspace/api-zod";
+import { fetch, Agent } from "undici";
 
 const router = Router();
+
+const h2Agent = new Agent({ allowH2: true });
 
 const COOKIES = "csrftoken=qXbOywPKhDdMfdTceKhs2DcocVgMz4q8; mid=adiAuAAEAAFqNhj2f7KBf56OjV5_; ig_did=6C2A174F-093F-4BAC-8DDF-B7D6527F73AE";
 
@@ -24,7 +27,12 @@ async function sendRecovery(email: string): Promise<{ email: string; success: bo
   const body = new URLSearchParams({ email_or_username: email, jazoest }).toString();
 
   try {
-    const res = await fetch(url, { method: "POST", headers: HEADERS, body });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: HEADERS,
+      body,
+      dispatcher: h2Agent,
+    });
     const text = await res.text();
     try {
       return { email, success: true, response: JSON.stringify(JSON.parse(text), null, 2) };
