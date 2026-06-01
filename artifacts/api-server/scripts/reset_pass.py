@@ -133,7 +133,12 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         if r3.status_code >= 400:
             return {"success": False, "error": f"Step 3 failed [{r3.status_code}]: {r3.text[:400]}"}
 
-        username = id_user(str(user_id), USER_AGENT)
+        # uidb36 is base-36 encoded numeric user ID — more reliable than user_id from response
+        try:
+            numeric_uid = str(int(uidb36, 36))
+        except Exception:
+            numeric_uid = str(user_id)
+        username = id_user(numeric_uid, USER_AGENT)
 
         display_username = username if username else f"uid:{user_id}"
         msg = (
