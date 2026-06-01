@@ -12,6 +12,7 @@ router.post("/auth/verify-key", (req: Request, res: Response) => {
   return res.json(result);
 });
 
+
 router.post("/auth/request-key", (req: Request, res: Response) => {
   const { name } = req.body;
   if (!name || typeof name !== "string" || !name.trim()) {

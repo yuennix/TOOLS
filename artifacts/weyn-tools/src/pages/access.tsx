@@ -36,6 +36,11 @@ export default function Access() {
       const data = await res.json();
       if (data.valid) {
         sessionStorage.setItem("weyn-access", "1");
+        if (data.expiresAt) {
+          localStorage.setItem("weyn-key-expiry", data.expiresAt);
+        } else {
+          localStorage.removeItem("weyn-key-expiry");
+        }
         toast({ title: "Access Granted", description: "Welcome to WEYN Tools" });
         setLocation("/");
       } else {

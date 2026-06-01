@@ -79,11 +79,12 @@ export function createPendingKey(name: string): AccessKey {
   return newKey;
 }
 
-export function activateKey(id: string): AccessKey | null {
+export function activateKey(id: string, expiresAt?: string | null): AccessKey | null {
   const keys = readKeys();
   const found = keys.find((k) => k.id === id);
   if (!found) return null;
   found.active = true;
+  if (expiresAt !== undefined) found.expiresAt = expiresAt;
   writeKeys(keys);
   return found;
 }
@@ -100,7 +101,7 @@ export function deleteKey(id: string): boolean {
   return true;
 }
 
-export function verifyAndConsumeKey(keyStr: string): { valid: boolean; error?: string } {
+export function verifyAndConsumeKey(keyStr: string): { valid: boolean; expiresAt?: string | null; error?: string } {
   const keys = readKeys();
   const found = keys.find((k) => k.key === keyStr.toUpperCase().trim());
   if (!found) return { valid: false, error: "Invalid key" };
@@ -112,5 +113,5 @@ export function verifyAndConsumeKey(keyStr: string): { valid: boolean; error?: s
   found.used = true;
   found.usedAt = new Date().toISOString();
   writeKeys(keys);
-  return { valid: true };
+  return { valid: true, expiresAt: found.expiresAt };
 }

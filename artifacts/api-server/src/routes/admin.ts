@@ -31,7 +31,8 @@ router.post("/admin/keys/generate", requireAdmin, (req: Request, res: Response) 
 });
 
 router.post("/admin/keys/:id/activate", requireAdmin, (req: Request, res: Response) => {
-  const key = activateKey(req.params.id);
+  const { expiresAt } = req.body;
+  const key = activateKey(req.params.id, expiresAt ?? null);
   if (!key) return res.status(404).json({ error: "Key not found" });
   return res.json({ key });
 });

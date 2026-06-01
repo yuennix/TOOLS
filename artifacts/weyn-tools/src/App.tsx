@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,13 +19,29 @@ const queryClient = new QueryClient({
   },
 });
 
-function hasAccess() {
-  return sessionStorage.getItem("weyn-access") === "1";
+function isAccessValid() {
+  if (sessionStorage.getItem("weyn-access") !== "1") return false;
+  const expiry = localStorage.getItem("weyn-key-expiry");
+  if (expiry && new Date() > new Date(expiry)) return false;
+  return true;
+}
+
+function clearAccess() {
+  sessionStorage.removeItem("weyn-access");
+  localStorage.removeItem("weyn-key-expiry");
 }
 
 function KeyGuard({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
-  if (!hasAccess()) {
+  const [, setLocation] = useLocation();
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 10000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!isAccessValid()) {
+    clearAccess();
     return <Redirect to="/access" />;
   }
   return <>{children}</>;

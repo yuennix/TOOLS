@@ -14,6 +14,8 @@ interface Key {
 }
 
 type Filter = "all" | "pending" | "approved" | "used" | "expired";
+type ExpiryPreset = "1h" | "24h" | "72h" | "custom";
+type CustomUnit = "minutes" | "hours";
 
 function adminHeaders(): Record<string, string> {
   return {
@@ -36,6 +38,20 @@ function fmtShort(iso: string | null) {
     ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 
+function computeExpiry(preset: ExpiryPreset, customVal: string, customUnit: CustomUnit): string | null {
+  const now = new Date();
+  if (preset === "1h")  { now.setHours(now.getHours() + 1);   return now.toISOString(); }
+  if (preset === "24h") { now.setHours(now.getHours() + 24);  return now.toISOString(); }
+  if (preset === "72h") { now.setHours(now.getHours() + 72);  return now.toISOString(); }
+  if (preset === "custom") {
+    const n = parseFloat(customVal);
+    if (!n || n <= 0) return null;
+    const ms = customUnit === "hours" ? n * 3600000 : n * 60000;
+    return new Date(now.getTime() + ms).toISOString();
+  }
+  return null;
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("weyn-admin") === "1");
@@ -47,6 +63,13 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Expiry picker state
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [expiryPreset, setExpiryPreset] = useState<ExpiryPreset>("24h");
+  const [customVal, setCustomVal] = useState("");
+  const [customUnit, setCustomUnit] = useState<CustomUnit>("hours");
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const loadKeys = useCallback(async () => {
     setLoading(true);
@@ -88,17 +111,34 @@ export default function Admin() {
     }
   }
 
-  async function approveKey(id: string) {
+  function openApprover(id: string) {
+    setApprovingId(id);
+    setExpiryPreset("24h");
+    setCustomVal("");
+    setCustomUnit("hours");
+  }
+
+  async function confirmApprove(id: string) {
+    const expiresAt = computeExpiry(expiryPreset, customVal, customUnit);
+    if (expiryPreset === "custom" && !expiresAt) {
+      toast({ title: "Invalid duration", description: "Enter a positive number", variant: "destructive" });
+      return;
+    }
+    setConfirmLoading(true);
     try {
       const res = await fetch(`/api/admin/keys/${id}/activate`, {
         method: "POST",
         headers: adminHeaders(),
+        body: JSON.stringify({ expiresAt }),
       });
       if (!res.ok) throw new Error();
       toast({ title: "Approved", description: "Key is now active" });
+      setApprovingId(null);
       loadKeys();
     } catch {
       toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
+    } finally {
+      setConfirmLoading(false);
     }
   }
 
@@ -178,6 +218,13 @@ export default function Admin() {
   ];
 
   const visible = filter === "all" ? keys : keys.filter((k) => keyCategory(k) === filter);
+
+  const presets: { key: ExpiryPreset; label: string }[] = [
+    { key: "1h",     label: "1 HOUR" },
+    { key: "24h",    label: "24 HOURS" },
+    { key: "72h",    label: "72 HOURS" },
+    { key: "custom", label: "CUSTOM" },
+  ];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -259,13 +306,16 @@ export default function Admin() {
             expired:  { label: "EXPIRED",  color: "#ef4444" },
           };
           const badge = badgeMap[cat];
+          const isApproving = approvingId === k.id;
+
           return (
             <div key={k.id} className="p-4 space-y-2"
               style={{
-                border: `1px solid ${cat === "pending" ? "#f59e0b33" : "var(--line)"}`,
+                border: `1px solid ${cat === "pending" ? "#f59e0b33" : isApproving ? "var(--red-accent)44" : "var(--line)"}`,
                 borderRadius: "10px",
                 background: "var(--surface-2)",
                 opacity: k.used ? 0.65 : 1,
+                transition: "border-color 0.15s",
               }}>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -285,11 +335,101 @@ export default function Admin() {
                   ? ` · ${new Date() > new Date(k.expiresAt) ? "Expired" : "Expires"} ${fmtShort(k.expiresAt)}`
                   : " · No expiry"}
               </p>
+
+              {/* Inline expiry picker */}
+              {cat === "pending" && isApproving && (
+                <div className="mt-1 pt-3 space-y-3" style={{ borderTop: "1px solid var(--line)" }}>
+                  <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>SET EXPIRY</p>
+
+                  {/* Preset buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {presets.map((p) => (
+                      <button key={p.key} type="button"
+                        onClick={() => setExpiryPreset(p.key)}
+                        className="px-3 py-1 text-xs font-mono transition-all duration-150"
+                        style={{
+                          border: `1px solid ${expiryPreset === p.key ? "var(--red-accent)" : "var(--line)"}`,
+                          borderRadius: "5px",
+                          background: expiryPreset === p.key ? "var(--red-accent)" : "transparent",
+                          color: expiryPreset === p.key ? "#fff" : "var(--text-muted)",
+                          cursor: "pointer",
+                        }}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom duration input */}
+                  {expiryPreset === "custom" && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={customVal}
+                        onChange={(e) => setCustomVal(e.target.value)}
+                        placeholder="e.g. 90"
+                        className="w-28 px-3 py-1.5 text-xs font-mono transition-all"
+                        style={{
+                          border: "1px solid var(--line)",
+                          borderRadius: "6px",
+                          background: "var(--surface)",
+                          color: "var(--text-primary)",
+                          outline: "none",
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = "var(--red-accent)"; }}
+                        onBlur={(e) => { e.target.style.borderColor = "var(--line)"; }}
+                      />
+                      <div className="flex" style={{ border: "1px solid var(--line)", borderRadius: "6px", overflow: "hidden" }}>
+                        {(["minutes", "hours"] as CustomUnit[]).map((u, i) => (
+                          <button key={u} type="button"
+                            onClick={() => setCustomUnit(u)}
+                            className="px-3 py-1.5 text-xs font-mono transition-all duration-150"
+                            style={{
+                              background: customUnit === u ? "var(--red-accent)" : "transparent",
+                              color: customUnit === u ? "#fff" : "var(--text-muted)",
+                              border: "none",
+                              borderLeft: i === 1 ? "1px solid var(--line)" : "none",
+                              cursor: "pointer",
+                            }}>
+                            {u === "minutes" ? "MINS" : "HRS"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Confirm / Cancel */}
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => confirmApprove(k.id)}
+                      disabled={confirmLoading || (expiryPreset === "custom" && (!customVal || parseFloat(customVal) <= 0))}
+                      className="px-3 py-1 text-xs font-mono transition-all duration-150"
+                      style={{
+                        border: "1px solid #22c55e",
+                        borderRadius: "5px",
+                        color: "#22c55e",
+                        background: "none",
+                        cursor: confirmLoading ? "not-allowed" : "pointer",
+                        opacity: (expiryPreset === "custom" && (!customVal || parseFloat(customVal) <= 0)) ? 0.4 : 1,
+                      }}>
+                      {confirmLoading ? "..." : "CONFIRM"}
+                    </button>
+                    <button type="button"
+                      onClick={() => setApprovingId(null)}
+                      className="px-3 py-1 text-xs font-mono transition-all duration-150"
+                      style={{ border: "1px solid var(--line)", borderRadius: "5px", color: "var(--text-muted)", background: "none", cursor: "pointer" }}>
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons row */}
               <div className="flex items-center gap-2">
-                {cat === "pending" && (
-                  <Btn label="APPROVE" color="#22c55e" onClick={() => approveKey(k.id)} />
+                {cat === "pending" && !isApproving && (
+                  <Btn label="APPROVE" color="#22c55e" onClick={() => openApprover(k.id)} />
                 )}
-                {(cat === "approved") && (
+                {cat === "approved" && (
                   <Btn label={copiedId === k.id ? "COPIED!" : "COPY"} color="var(--text-secondary)" onClick={() => copyKey(k.id, k.key)} />
                 )}
                 <Btn label="DELETE" color="var(--text-muted)" onClick={() => deleteKey(k.id)} />

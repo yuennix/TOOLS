@@ -1,1 +1,14 @@
-{"keys":[]}
+{
+  "keys": [
+    {
+      "id": "92dcbf66-4edd-4b1e-bb59-54c3aa496c94",
+      "name": "tg",
+      "key": "WEYN-3LU3-0H55-Y0LQ",
+      "createdAt": "2026-06-01T06:53:32.266Z",
+      "expiresAt": "2026-06-01T07:53:54.170Z",
+      "active": true,
+      "used": true,
+      "usedAt": "2026-06-01T06:54:05.905Z"
+    }
+  ]
+}
