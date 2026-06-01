@@ -29,6 +29,16 @@
       "createdAt": 1780273276583,
       "approvedAt": 1780273287897,
       "usedAt": 1780273305644
+    },
+    {
+      "id": "410594ed-f8ad-408e-b900-fb6f04573f54",
+      "name": "heheh",
+      "key": "WEYN-IL8Q-JW37-YNUU",
+      "status": "used",
+      "expiresAt": 1780281611207,
+      "createdAt": 1780277999052,
+      "approvedAt": 1780278011207,
+      "usedAt": 1780278019458
     }
   ]
 }
