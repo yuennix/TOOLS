@@ -32,13 +32,13 @@ router.post("/admin/keys/generate", requireAdmin, (req: Request, res: Response) 
 
 router.post("/admin/keys/:id/activate", requireAdmin, (req: Request, res: Response) => {
   const { expiresAt } = req.body;
-  const key = activateKey(req.params.id, expiresAt ?? null);
+  const key = activateKey(req.params.id as string, expiresAt ?? null);
   if (!key) return res.status(404).json({ error: "Key not found" });
   return res.json({ key });
 });
 
 router.delete("/admin/keys/:id", requireAdmin, (req: Request, res: Response) => {
-  const deleted = deleteKey(req.params.id);
+  const deleted = deleteKey(req.params.id as string);
   if (!deleted) return res.status(404).json({ error: "Key not found" });
   return res.json({ success: true });
 });
