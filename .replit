@@ -44,8 +44,8 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "node artifacts/api-server/dist/index.js & npx serve -s artifacts/weyn-tools/dist -l 5000"]
-build = ["bash", "-c", "pip install -r requirements.txt && pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build"]
+run = ["bash", "-c", "PORT=5000 NODE_ENV=production node artifacts/api-server/dist/index.js"]
+build = ["bash", "-c", "pip install -r requirements.txt && pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/"]
 
 [userenv]
 
