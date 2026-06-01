@@ -4,7 +4,7 @@ nixPkgs = ["nodejs_20", "nodePackages_latest.pnpm", "python312", "uv"]
 [phases.install]
 cmds = [
   "pnpm install --frozen-lockfile",
-  "uv pip install --system httpx[http2] requests h2 pyfiglet"
+  "uv pip install --target /app/.python_libs httpx[http2] requests h2 pyfiglet"
 ]
 
 [phases.build]
@@ -16,4 +16,4 @@ cmds = [
 ]
 
 [start]
-cmd = "NODE_ENV=production node artifacts/api-server/dist/index.js"
+cmd = "PYTHONPATH=/app/.python_libs NODE_ENV=production node artifacts/api-server/dist/index.js"
