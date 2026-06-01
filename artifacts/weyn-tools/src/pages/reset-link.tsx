@@ -32,10 +32,13 @@ export default function ResetLink() {
         body: JSON.stringify({ emails }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? `Server error ${res.status}`);
+      }
       setResults(data.results ?? []);
       toast({ title: "Done", description: `Processed ${data.results?.length ?? 0} email(s)` });
     } catch (err) {
-      toast({ title: "Error", description: String(err), variant: "destructive" });
+      toast({ title: "Error", description: String(err instanceof Error ? err.message : err), variant: "destructive" });
     } finally {
       setLoading(false);
     }

@@ -111,7 +111,6 @@ export function validateKey(key: string): { valid: boolean; name?: string; reaso
   const entry = db.keys.find((k) => k.key === key);
   if (!entry) return { valid: false, reason: "Key not found" };
   if (entry.status === "pending") return { valid: false, reason: "Key is awaiting approval" };
-  if (entry.status === "used") return { valid: false, reason: "Key has already been used" };
   if (entry.status === "expired") return { valid: false, reason: "Key has expired" };
   if (
     entry.status === "approved" &&
@@ -122,7 +121,9 @@ export function validateKey(key: string): { valid: boolean; name?: string; reaso
     writeDB(db);
     return { valid: false, reason: "Key has expired" };
   }
-  entry.status = "used";
+  if (entry.status !== "approved" && entry.status !== "used") {
+    return { valid: false, reason: "Key is not valid" };
+  }
   entry.usedAt = Date.now();
   writeDB(db);
   return { valid: true, name: entry.name };
