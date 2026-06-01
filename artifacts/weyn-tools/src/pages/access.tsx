@@ -1,11 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 type Tab = "enter" | "generate";
 
+function isAccessValid() {
+  if (localStorage.getItem("weyn-access") !== "1") return false;
+  const expiry = localStorage.getItem("weyn-key-expiry");
+  if (expiry && new Date() > new Date(expiry)) {
+    localStorage.removeItem("weyn-access");
+    localStorage.removeItem("weyn-key-expiry");
+    return false;
+  }
+  return true;
+}
+
 export default function Access() {
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAccessValid()) setLocation("/");
+  }, [setLocation]);
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("generate");
 

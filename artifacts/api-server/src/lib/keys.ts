@@ -106,12 +106,13 @@ export function verifyAndConsumeKey(keyStr: string): { valid: boolean; expiresAt
   const found = keys.find((k) => k.key === keyStr.toUpperCase().trim());
   if (!found) return { valid: false, error: "Invalid key" };
   if (!found.active) return { valid: false, error: "Key pending admin approval" };
-  if (found.used) return { valid: false, error: "Key already used" };
   if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
     return { valid: false, error: "Key has expired" };
   }
-  found.used = true;
-  found.usedAt = new Date().toISOString();
-  writeKeys(keys);
+  if (!found.used) {
+    found.used = true;
+    found.usedAt = new Date().toISOString();
+    writeKeys(keys);
+  }
   return { valid: true, expiresAt: found.expiresAt };
 }
