@@ -7,6 +7,7 @@ const KEYS_FILE = path.join(DATA_DIR, "keys.json");
 
 export interface AccessKey {
   id: string;
+  name: string | null;
   key: string;
   createdAt: string;
   expiresAt: string | null;
@@ -43,10 +44,11 @@ function generateKeyString(): string {
   return `WEYN-${segment()}-${segment()}-${segment()}`;
 }
 
-export function createKey(expiresAt: string | null): AccessKey {
+export function createKey(expiresAt: string | null, name?: string | null): AccessKey {
   const keys = readKeys();
   const newKey: AccessKey = {
     id: crypto.randomUUID(),
+    name: name ?? null,
     key: generateKeyString(),
     createdAt: new Date().toISOString(),
     expiresAt: expiresAt ?? null,
