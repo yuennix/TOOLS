@@ -1,7 +1,7 @@
 import * as React from "react";
 
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 5000;
+const TOAST_REMOVE_DELAY = 2000;
 
 type ToastVariant = "default" | "destructive";
 
@@ -14,7 +14,7 @@ export type Toast = {
 };
 
 type ToastAction =
-  | { type: "ADD_TOAST"; toast: Omit<Toast, "id" | "open"> }
+  | { type: "ADD_TOAST"; toast: Omit<Toast, "open"> }
   | { type: "DISMISS_TOAST"; toastId: string }
   | { type: "REMOVE_TOAST"; toastId: string };
 
@@ -43,7 +43,7 @@ function reducer(state: State, action: ToastAction): State {
       return {
         ...state,
         toasts: [
-          { ...action.toast, id: genId(), open: true },
+          { ...action.toast, open: true },
           ...state.toasts,
         ].slice(0, TOAST_LIMIT),
       };
@@ -72,7 +72,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, { toasts: [] });
 
   function toast(props: Omit<Toast, "id" | "open">) {
-    dispatch({ type: "ADD_TOAST", toast: props });
+    const id = genId();
+    dispatch({ type: "ADD_TOAST", toast: { ...props, id } });
+    addToRemoveQueue(id, dispatch);
   }
 
   function dismiss(toastId: string) {

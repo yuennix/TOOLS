@@ -4,11 +4,21 @@
       "id": "6eedddb6-d8b2-41a3-83ab-324a6f8f3ed8",
       "name": "weyn",
       "key": "WEYN-XXJX-9999-ZUA7",
-      "status": "approved",
+      "status": "expired",
       "expiresAt": 1780270472870,
       "createdAt": 1780266481471,
       "approvedAt": 1780266872870,
       "usedAt": null
+    },
+    {
+      "id": "b7b734b4-ec11-429c-b157-7537552fbc7c",
+      "name": "weyn",
+      "key": "WEYN-TA3A-NR69-7BI5",
+      "status": "used",
+      "expiresAt": 1780275573229,
+      "createdAt": 1780271944097,
+      "approvedAt": 1780271973229,
+      "usedAt": 1780271981053
     }
   ]
 }

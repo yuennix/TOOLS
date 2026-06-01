@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -75,6 +75,7 @@ export default function Access() {
 function EnterKeyForm() {
   const { login } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -96,6 +97,7 @@ function EnterKeyForm() {
       if (data.valid) {
         login(data.name, trimmed);
         toast({ title: "Access granted", description: `Welcome, ${data.name}` });
+        setTimeout(() => setLocation("/"), 500);
       } else {
         toast({ title: "Access denied", description: data.reason ?? "Invalid key", variant: "destructive" });
       }
