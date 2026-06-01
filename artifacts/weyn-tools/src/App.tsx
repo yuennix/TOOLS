@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,8 +32,7 @@ function clearAccess() {
 }
 
 function KeyGuard({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 10000);

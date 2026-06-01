@@ -9,6 +9,16 @@
       "active": true,
       "used": true,
       "usedAt": "2026-06-01T06:54:05.905Z"
+    },
+    {
+      "id": "0fcadd3b-d8e9-4ba6-af6e-fb3191cafa2c",
+      "name": "gg",
+      "key": "WEYN-8MOM-2UHD-CF1H",
+      "createdAt": "2026-06-01T07:04:57.417Z",
+      "expiresAt": null,
+      "active": false,
+      "used": false,
+      "usedAt": null
     }
   ]
 }
