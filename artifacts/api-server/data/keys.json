@@ -19,6 +19,16 @@
       "createdAt": 1780271944097,
       "approvedAt": 1780271973229,
       "usedAt": 1780271981053
+    },
+    {
+      "id": "848e6969-621d-40a1-924b-18dc4c0fb923",
+      "name": "titw",
+      "key": "WEYN-S39H-OXTR-QPDL",
+      "status": "used",
+      "expiresAt": 1780276887897,
+      "createdAt": 1780273276583,
+      "approvedAt": 1780273287897,
+      "usedAt": 1780273305644
     }
   ]
 }

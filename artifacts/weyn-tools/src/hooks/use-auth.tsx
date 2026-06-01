@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useCallback, ReactNode } from "rea
 interface Session {
   name: string;
   key: string;
+  loginAt: number;
 }
 
 interface AuthCtx {
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(loadSession);
 
   const login = useCallback((name: string, key: string) => {
-    const s = { name, key };
+    const s = { name, key, loginAt: Date.now() };
     localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     setSession(s);
   }, []);

@@ -89,14 +89,14 @@ export default function Home() {
       />
 
       {/* Tool cards */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <p
           className="text-xs font-mono tracking-widest"
           style={{ color: "var(--text-muted)" }}
         >
           SELECT MODULE
         </p>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
           {TOOLS.map((tool, i) => (
             <ToolCard key={tool.id} tool={tool} delay={i * 80} />
           ))}
@@ -130,38 +130,55 @@ function ToolCard({
     <Link
       href={tool.href}
       data-testid={tool.testId}
-      className="block group transition-all duration-200 animate-fade-up"
+      className="flex items-center gap-3 animate-fade-up"
       style={{
         animationDelay: `${delay}ms`,
         border: hovered ? "1px solid var(--red-accent)" : "1px solid var(--line)",
         background: hovered ? "var(--surface-2)" : "var(--surface)",
         borderRadius: "6px",
-        padding: "16px",
-        boxShadow: hovered
-          ? "0 0 0 1px var(--red-glow), 0 4px 20px var(--red-glow)"
-          : "0 1px 4px rgba(0,0,0,0.06)",
+        padding: "10px 12px",
+        boxShadow: hovered ? "0 0 0 1px var(--red-glow)" : "none",
         cursor: "pointer",
         textDecoration: "none",
+        transition: "all 0.2s",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-2">
-        <div
-          className="w-7 h-7 flex items-center justify-center font-mono text-xs font-bold border"
-          style={{
-            border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
-            color: hovered ? "var(--red-accent)" : "var(--text-muted)",
-            background: hovered ? "var(--red-glow)" : "transparent",
-            borderRadius: "4px",
-            transition: "all 0.2s",
-          }}
+      {/* ID badge */}
+      <div
+        className="shrink-0 w-6 h-6 flex items-center justify-center font-mono text-xs font-bold"
+        style={{
+          border: `1px solid ${hovered ? "var(--red-accent)" : "var(--line)"}`,
+          color: hovered ? "var(--red-accent)" : "var(--text-muted)",
+          background: hovered ? "var(--red-glow)" : "transparent",
+          borderRadius: "4px",
+          transition: "all 0.2s",
+        }}
+      >
+        {tool.id}
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-sm font-semibold leading-tight"
+          style={{ color: "var(--text-primary)" }}
         >
-          {tool.id}
-        </div>
+          {tool.title}
+        </p>
+        <p
+          className="text-xs font-mono truncate"
+          style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}
+        >
+          {tool.subtitle}
+        </p>
+      </div>
+
+      {/* Tag + arrow */}
+      <div className="shrink-0 flex items-center gap-2">
         <span
-          className="text-xs font-mono px-2 py-0.5 border"
+          className="text-xs font-mono px-1.5 py-0.5"
           style={{
             border: "1px solid var(--line)",
             color: "var(--text-muted)",
@@ -171,36 +188,6 @@ function ToolCard({
         >
           {tool.tag}
         </span>
-      </div>
-
-      {/* Content */}
-      <div className="space-y-0.5 mb-3">
-        <p
-          className="text-xs font-mono tracking-wider"
-          style={{ color: hovered ? "var(--red-accent)" : "var(--text-muted)", transition: "color 0.2s" }}
-        >
-          {tool.subtitle}
-        </p>
-        <h3
-          className="text-base font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {tool.title}
-        </h3>
-        <p className="text-xs" style={{ color: "var(--text-secondary)", lineHeight: "1.5" }}>
-          {tool.desc}
-        </p>
-      </div>
-
-      {/* CTA */}
-      <div
-        className="flex items-center gap-1 text-xs font-mono"
-        style={{
-          color: hovered ? "var(--red-accent)" : "var(--text-muted)",
-          transition: "color 0.2s",
-        }}
-      >
-        RUN MODULE
         <svg
           width="11"
           height="11"
@@ -208,7 +195,11 @@ function ToolCard({
           fill="none"
           stroke="currentColor"
           strokeWidth="2.5"
-          style={{ transform: hovered ? "translateX(3px)" : "none", transition: "transform 0.2s" }}
+          style={{
+            color: hovered ? "var(--red-accent)" : "var(--text-muted)",
+            transform: hovered ? "translateX(2px)" : "none",
+            transition: "all 0.2s",
+          }}
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
