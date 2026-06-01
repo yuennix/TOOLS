@@ -2,14 +2,28 @@ import { Router } from "express";
 import { SendResetLinksBody } from "@workspace/api-zod";
 import { spawn } from "child_process";
 import path from "path";
+import fs from "fs";
 
 const router = Router();
 
 const SCRIPT = path.resolve(__dirname, "../../scripts/send_recovery.py");
 
+function getPython(): string {
+  const candidates = [
+    "/app/.venv/bin/python3",
+    "/app/.venv/bin/python",
+    path.join(process.cwd(), ".venv/bin/python3"),
+    path.join(process.cwd(), ".venv/bin/python"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return "python3";
+}
+
 function runPython(emails: string[]): Promise<{ results: Array<{ email: string; success: boolean; response: string }> }> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("python3", [SCRIPT, ...emails]);
+    const proc = spawn(getPython(), [SCRIPT, ...emails]);
     let stdout = "";
     let stderr = "";
 
