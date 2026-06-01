@@ -8,7 +8,7 @@ type RequestState = "idle" | "pending" | "approved" | "rejected";
 export default function Access() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>("enter");
+  const [tab, setTab] = useState<Tab>("generate");
 
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -217,7 +217,7 @@ export default function Access() {
                       type="text"
                       value={name}
                       onChange={(e) => { setName(e.target.value); setNameError(""); }}
-                      placeholder="e.g. John"
+                      placeholder="Enter your name"
                       className="w-full px-4 py-3 text-sm transition-all duration-200"
                       style={{
                         border: nameError ? "1px solid #ef4444" : "1px solid var(--line)",
