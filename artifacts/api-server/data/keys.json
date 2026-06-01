@@ -29,6 +29,16 @@
       "active": true,
       "used": true,
       "usedAt": "2026-06-01T11:30:07.272Z"
+    },
+    {
+      "id": "0f12b83f-7a42-44a3-9505-4899301dd70c",
+      "name": "hh",
+      "key": "WEYN-72K3-PE45-56BW",
+      "createdAt": "2026-06-01T15:12:35.187Z",
+      "expiresAt": "2026-06-02T15:12:46.122Z",
+      "active": true,
+      "used": true,
+      "usedAt": "2026-06-01T15:12:53.730Z"
     }
   ]
 }

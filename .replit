@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/api-zod run build && (pnpm --filter @workspace/api-server run dev & pnpm --filter @workspace/weyn-tools run dev)"
+args = "pip install -q -r requirements.txt && pnpm --filter @workspace/api-zod run build && (pnpm --filter @workspace/api-server run dev & pnpm --filter @workspace/weyn-tools run dev)"
 waitForPort = 5000
 
 [[ports]]
@@ -37,10 +37,6 @@ externalPort = 3002
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
