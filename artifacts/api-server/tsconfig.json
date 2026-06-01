@@ -7,7 +7,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "paths": {
+      "@workspace/api-zod": ["../../lib/api-zod/src/index.ts"]
+    },
+    "baseUrl": "."
   },
-  "include": ["src"]
+  "include": ["src", "../../lib/api-zod/src"]
 }

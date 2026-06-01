@@ -22,13 +22,13 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=production node artifacts/api-server/dist/index.js"
+args = "pnpm --filter @workspace/api-server run dev & pnpm --filter @workspace/weyn-tools run dev"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[ports]]
 localPort = 3001
@@ -37,6 +37,10 @@ externalPort = 3002
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"

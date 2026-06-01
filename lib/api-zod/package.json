@@ -2,8 +2,7 @@
   "name": "@workspace/api-zod",
   "version": "0.0.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "scripts": {
     "build": "tsc"
   },

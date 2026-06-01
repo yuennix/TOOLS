@@ -75,11 +75,6 @@ export default function ResetPass() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setResult({ success: false, error: data.error ?? `Server error ${res.status}` });
-        toast({ title: "Failed", description: data.error ?? `Server error ${res.status}`, variant: "destructive" });
-        return;
-      }
       setResult(data);
       if (data.success) {
         toast({ title: "Success", description: `Password reset for @${data.username}` });
@@ -87,8 +82,7 @@ export default function ResetPass() {
         toast({ title: "Failed", description: data.error ?? "Unknown error", variant: "destructive" });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Error", description: msg, variant: "destructive" });
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
