@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import { verifyAndConsumeKey } from "../lib/keys";
-import { createRequest, getRequest } from "../lib/requests";
+import { verifyAndConsumeKey, createPendingKey } from "../lib/keys";
 
 const router = Router();
 
@@ -18,19 +17,8 @@ router.post("/auth/request-key", (req: Request, res: Response) => {
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ error: "Name is required" });
   }
-  const request = createRequest(name);
-  return res.json({ id: request.id, name: request.name, status: request.status });
-});
-
-router.get("/auth/request-key/:id", (req: Request, res: Response) => {
-  const request = getRequest(req.params.id);
-  if (!request) return res.status(404).json({ error: "Request not found" });
-  return res.json({
-    id: request.id,
-    name: request.name,
-    status: request.status,
-    key: request.status === "approved" ? request.key : null,
-  });
+  const key = createPendingKey(name);
+  return res.json({ id: key.id, name: key.name, key: key.key });
 });
 
 export default router;

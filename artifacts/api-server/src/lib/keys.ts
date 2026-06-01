@@ -11,6 +11,7 @@ export interface AccessKey {
   key: string;
   createdAt: string;
   expiresAt: string | null;
+  active: boolean;
   used: boolean;
   usedAt: string | null;
 }
@@ -52,12 +53,39 @@ export function createKey(expiresAt: string | null, name?: string | null): Acces
     key: generateKeyString(),
     createdAt: new Date().toISOString(),
     expiresAt: expiresAt ?? null,
+    active: true,
     used: false,
     usedAt: null,
   };
   keys.push(newKey);
   writeKeys(keys);
   return newKey;
+}
+
+export function createPendingKey(name: string): AccessKey {
+  const keys = readKeys();
+  const newKey: AccessKey = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    key: generateKeyString(),
+    createdAt: new Date().toISOString(),
+    expiresAt: null,
+    active: false,
+    used: false,
+    usedAt: null,
+  };
+  keys.push(newKey);
+  writeKeys(keys);
+  return newKey;
+}
+
+export function activateKey(id: string): AccessKey | null {
+  const keys = readKeys();
+  const found = keys.find((k) => k.id === id);
+  if (!found) return null;
+  found.active = true;
+  writeKeys(keys);
+  return found;
 }
 
 export function getAllKeys(): AccessKey[] {
@@ -76,6 +104,7 @@ export function verifyAndConsumeKey(keyStr: string): { valid: boolean; error?: s
   const keys = readKeys();
   const found = keys.find((k) => k.key === keyStr.toUpperCase().trim());
   if (!found) return { valid: false, error: "Invalid key" };
+  if (!found.active) return { valid: false, error: "Key pending admin approval" };
   if (found.used) return { valid: false, error: "Key already used" };
   if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
     return { valid: false, error: "Key has expired" };

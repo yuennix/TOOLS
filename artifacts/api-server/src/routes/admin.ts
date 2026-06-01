@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { createKey, getAllKeys, deleteKey } from "../lib/keys";
-import { getAllRequests, approveRequest, rejectRequest, deleteRequest } from "../lib/requests";
+import { createKey, getAllKeys, deleteKey, activateKey } from "../lib/keys";
 
 const router = Router();
 const ADMIN_PASSWORD = "yuennix";
@@ -31,36 +30,15 @@ router.post("/admin/keys/generate", requireAdmin, (req: Request, res: Response) 
   return res.json({ key });
 });
 
+router.post("/admin/keys/:id/activate", requireAdmin, (req: Request, res: Response) => {
+  const key = activateKey(req.params.id);
+  if (!key) return res.status(404).json({ error: "Key not found" });
+  return res.json({ key });
+});
+
 router.delete("/admin/keys/:id", requireAdmin, (req: Request, res: Response) => {
   const deleted = deleteKey(req.params.id);
   if (!deleted) return res.status(404).json({ error: "Key not found" });
-  return res.json({ success: true });
-});
-
-router.get("/admin/requests", requireAdmin, (_req: Request, res: Response) => {
-  const requests = getAllRequests().slice().reverse();
-  return res.json({ requests });
-});
-
-router.post("/admin/requests/:id/approve", requireAdmin, (req: Request, res: Response) => {
-  const { expiresAt } = req.body;
-  const allRequests = getAllRequests();
-  const reqItem = allRequests.find((r) => r.id === req.params.id);
-  if (!reqItem) return res.status(404).json({ error: "Request not found" });
-  const key = createKey(expiresAt ?? null, reqItem.name);
-  const updated = approveRequest(req.params.id, key.key);
-  return res.json({ request: updated, key });
-});
-
-router.post("/admin/requests/:id/reject", requireAdmin, (req: Request, res: Response) => {
-  const updated = rejectRequest(req.params.id);
-  if (!updated) return res.status(404).json({ error: "Request not found" });
-  return res.json({ request: updated });
-});
-
-router.delete("/admin/requests/:id", requireAdmin, (req: Request, res: Response) => {
-  const deleted = deleteRequest(req.params.id);
-  if (!deleted) return res.status(404).json({ error: "Request not found" });
   return res.json({ success: true });
 });
 
