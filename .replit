@@ -50,4 +50,3 @@ build = ["bash", "-c", "pip install -r requirements.txt && pnpm install && pnpm 
 [userenv]
 
 [userenv.shared]
-ADMIN_JWT_SECRET = "e0b7275edc3d99ab47a09abb97b2cd259e42bca97db19ce1daeb783a2c950337e59873e8843b0fad6d6835ee6c580530"
