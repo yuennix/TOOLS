@@ -1,10 +1,19 @@
 [phases.setup]
-nixPkgs = ["python312"]
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = [
-  "python3 -m ensurepip --upgrade && python3 -m pip install httpx[http2] requests pyfiglet rich"
+  "npm install -g pnpm",
+  "pnpm install --frozen-lockfile"
+]
+
+[phases.build]
+cmds = [
+  "pnpm --filter @workspace/api-zod run build",
+  "pnpm --filter @workspace/api-server run build",
+  "pnpm --filter @workspace/weyn-tools run build",
+  "mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/"
 ]
 
 [start]
-cmd = "python3 weyn.py"
+cmd = "node artifacts/api-server/dist/index.js"
