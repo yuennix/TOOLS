@@ -5,7 +5,7 @@ export const SendResetLinksBody = z.object({
 });
 
 export const ResetPasswordBody = z.object({
-  resetLink: z.string(),
+  resetLinks: z.array(z.string()),
   chatId: z.string(),
   botToken: z.string(),
   customPassword: z.string().nullable().optional(),

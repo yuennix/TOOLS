@@ -37,24 +37,30 @@ router.post("/reset-pass", async (req, res) => {
     return res.status(400).json({ error: "Invalid request body" });
   }
 
-  const { resetLink, chatId, botToken, customPassword } = parsed.data;
+  const { resetLinks, chatId, botToken, customPassword } = parsed.data;
 
-  const args = [
-    "--reset-link", resetLink,
-    "--chat-id", chatId,
-    "--bot-token", botToken,
-  ];
-  if (customPassword) {
-    args.push("--custom-password", customPassword);
+  const results: Array<{ resetLink: string; success: boolean; username?: string | null; password?: string | null; error?: string | null }> = [];
+
+  for (const resetLink of resetLinks) {
+    const args = [
+      "--reset-link", resetLink,
+      "--chat-id", chatId,
+      "--bot-token", botToken,
+    ];
+    if (customPassword) {
+      args.push("--custom-password", customPassword);
+    }
+
+    try {
+      const data = await runPython(args);
+      results.push({ resetLink, ...data });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({ resetLink, success: false, error: msg });
+    }
   }
 
-  try {
-    const data = await runPython(args);
-    return res.json(data);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({ success: false, error: msg });
-  }
+  return res.json({ results });
 });
 
 export default router;
