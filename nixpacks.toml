@@ -1,17 +1,10 @@
 [phases.setup]
-nixPkgs = [
-  "nodejs_20",
-  "nodePackages_latest.pnpm",
-  "python312",
-  "python312Packages.httpx",
-  "python312Packages.h2",
-  "python312Packages.requests",
-  "python312Packages.pyfiglet"
-]
+nixPkgs = ["nodejs_20", "nodePackages_latest.pnpm", "python312", "uv"]
 
 [phases.install]
 cmds = [
-  "pnpm install --frozen-lockfile"
+  "pnpm install --frozen-lockfile",
+  "uv pip install --system httpx[http2] requests h2 pyfiglet"
 ]
 
 [phases.build]
