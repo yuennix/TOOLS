@@ -2,11 +2,11 @@ import { Router, Request, Response, NextFunction } from "express";
 import { createKey, getAllKeys, deleteKey, activateKey } from "../lib/keys";
 
 const router = Router();
-const ADMIN_PASSWORD = "yuennix";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const pw = req.headers["x-admin-password"] as string;
-  if (pw !== ADMIN_PASSWORD) {
+  if (!ADMIN_PASSWORD || pw !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
@@ -14,7 +14,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 router.post("/admin/login", (req: Request, res: Response) => {
   const { password } = req.body;
-  if (password !== ADMIN_PASSWORD) {
+  if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
     return res.status(401).json({ success: false, error: "Wrong password" });
   }
   return res.json({ success: true });
