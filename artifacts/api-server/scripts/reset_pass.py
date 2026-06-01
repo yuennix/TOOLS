@@ -1,13 +1,11 @@
-import os
-import re
 import json
 import string
 import random
 import uuid
-import time
 from datetime import datetime
 import requests
 import sys
+
 
 def generate_device_info(custom_password=None):
     ANDROID_ID = f"android-{''.join(random.choices(string.hexdigits.lower(), k=16))}"
@@ -69,9 +67,12 @@ def send_telegram(bot_token, chat_id, text):
 def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=None):
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass = generate_device_info(custom_password)
-        uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
-        token = reset_link.split("&token=")[1].split("&")[0]
 
+        # Match original resetpass.py token extraction (split on ":" not "&")
+        uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
+        token = reset_link.split("&token=")[1].split(":")[0]
+
+        # Step 1: initiate password reset
         url = "https://i.instagram.com/api/v1/accounts/password_reset/"
         data = {
             "source": "one_click_login_email",
@@ -83,7 +84,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data, timeout=20)
 
         if "user_id" not in r.text:
-            return {"success": False, "error": f"Error in reset request: {r.text}"}
+            return {"success": False, "error": f"Step 1 failed: {r.text}"}
 
         mid = r.headers.get("Ig-Set-X-Mid", "")
         resp_json = r.json()
@@ -92,6 +93,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         nonce_code = resp_json.get("nonce_code")
         challenge_context = resp_json.get("challenge_context")
 
+        # Step 2: get challenge context
         url2 = "https://i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/"
         data2 = {
             "user_id": str(user_id),
@@ -110,6 +112,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             .split('", (bk.action.bool.Const, false)))')[0]
         )
 
+        # Step 3: submit new password
         data3 = {
             "is_caa": "False",
             "source": "",
@@ -124,7 +127,12 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "enc_new_password1": PASSWORD,
             "enc_new_password2": PASSWORD
         }
-        requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
+        r3 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
+
+        # Check if step 3 actually succeeded
+        r3_text = r3.text
+        if r3.status_code not in (200, 201) or "error" in r3_text.lower() and "success" not in r3_text.lower():
+            return {"success": False, "error": f"Step 3 (set password) failed [{r3.status_code}]: {r3_text[:400]}"}
 
         username = id_user(str(user_id), USER_AGENT)
 
