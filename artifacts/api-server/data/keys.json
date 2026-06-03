@@ -49,6 +49,16 @@
       "active": true,
       "used": true,
       "usedAt": "2026-06-01T15:30:15.584Z"
+    },
+    {
+      "id": "bb5de342-7717-410e-93f2-a61e30af1b97",
+      "name": "aaa",
+      "key": "WEYN-RSLQ-47OZ-D35Q",
+      "createdAt": "2026-06-03T15:20:49.983Z",
+      "expiresAt": "2026-06-03T16:21:07.086Z",
+      "active": true,
+      "used": true,
+      "usedAt": "2026-06-03T15:21:16.798Z"
     }
   ]
 }

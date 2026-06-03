@@ -276,7 +276,7 @@ function ActionButton({ loading, count }: { loading: boolean; count: number }) {
 }
 
 function ResultCard({ result }: { result: Result; index: number }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!result.success);
   const shortLink = result.resetLink.length > 60
     ? result.resetLink.slice(0, 60) + "…"
     : result.resetLink;
