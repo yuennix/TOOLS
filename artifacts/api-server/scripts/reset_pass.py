@@ -2,9 +2,9 @@ import json
 import string
 import random
 import uuid
+import re
 from datetime import datetime
 import requests
-import sys
 
 
 def generate_device_info(custom_password=None):
@@ -64,13 +64,45 @@ def send_telegram(bot_token, chat_id, text):
         pass
 
 
+def extract_challenge_context(r2_text, cni):
+    """Extract challenge_context from bloks response — tries multiple patterns."""
+    cleaned = r2_text.replace('\\', '')
+
+    # Primary pattern (original)
+    try:
+        return (
+            cleaned
+            .split(f'(bk.action.i64.Const, {cni}), "')[1]
+            .split('", (bk.action.bool.Const, false)))')[0]
+        )
+    except (IndexError, ValueError):
+        pass
+
+    # Fallback: regex search for challenge_context value
+    try:
+        match = re.search(r'"challenge_context"\s*:\s*"([^"]+)"', r2_text)
+        if match:
+            return match.group(1).replace('\\/', '/')
+    except Exception:
+        pass
+
+    raise ValueError(f"Could not extract challenge_context from response. cni={cni}, snippet={r2_text[:200]}")
+
+
 def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=None):
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass = generate_device_info(custom_password)
 
-        uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
-        token = reset_link.split("&token=")[1].split(":")[0]
+        # Parse uidb36 and token from the reset link
+        try:
+            uidb36 = reset_link.split("uidb36=")[1].split("&")[0]
+            token_raw = reset_link.split("token=")[1].split("&")[0]
+            # Token is everything before the first ":" if present
+            token = token_raw.split(":")[0] if ":" in token_raw else token_raw
+        except (IndexError, ValueError) as e:
+            return {"success": False, "error": f"Could not parse reset link: {e}"}
 
+        # Step 1: initiate password reset
         url = "https://i.instagram.com/api/v1/accounts/password_reset/"
         data = {
             "source": "one_click_login_email",
@@ -79,18 +111,25 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "token": token,
             "waterfall_id": WATERFALL_ID
         }
-        r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data, timeout=20)
+        try:
+            r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data, timeout=20)
+        except Exception as e:
+            return {"success": False, "error": f"Step 1 network error: {e}"}
 
         if "user_id" not in r.text:
-            return {"success": False, "error": f"Step 1 failed: {r.text}"}
+            return {"success": False, "error": f"Step 1 failed: {r.text[:300]}"}
 
-        mid = r.headers.get("Ig-Set-X-Mid", "")
-        resp_json = r.json()
-        user_id = resp_json.get("user_id")
-        cni = resp_json.get("cni")
-        nonce_code = resp_json.get("nonce_code")
-        challenge_context = resp_json.get("challenge_context")
+        try:
+            mid = r.headers.get("Ig-Set-X-Mid", "")
+            resp_json = r.json()
+            user_id = resp_json.get("user_id")
+            cni = resp_json.get("cni")
+            nonce_code = resp_json.get("nonce_code")
+            challenge_context = resp_json.get("challenge_context")
+        except Exception as e:
+            return {"success": False, "error": f"Step 1 parse error: {e} — {r.text[:200]}"}
 
+        # Step 2: get challenge context
         url2 = "https://i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/"
         data2 = {
             "user_id": str(user_id),
@@ -101,15 +140,17 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "bloks_versioning_id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
             "get_challenge": "true"
         }
-        r2 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data2, timeout=20).text
+        try:
+            r2 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data2, timeout=20).text
+        except Exception as e:
+            return {"success": False, "error": f"Step 2 network error: {e}"}
 
-        challenge_context_final = (
-            r2.replace('\\', '')
-            .split(f'(bk.action.i64.Const, {cni}), "')[1]
-            .split('", (bk.action.bool.Const, false)))')[0]
-        )
+        try:
+            challenge_context_final = extract_challenge_context(r2, cni)
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
-        # Exact data3 structure from resetpass.py
+        # Step 3: submit new password — exact structure from resetpass.py
         data3 = {
             "is_caa": "False",
             "source": "",
@@ -128,12 +169,15 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "enc_new_password1": PASSWORD,
             "enc_new_password2": PASSWORD
         }
-        r3 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
+        try:
+            r3 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
+        except Exception as e:
+            return {"success": False, "error": f"Step 3 network error: {e}"}
 
         if r3.status_code >= 400:
-            return {"success": False, "error": f"Step 3 failed [{r3.status_code}]: {r3.text[:400]}"}
+            return {"success": False, "error": f"Step 3 failed [{r3.status_code}]: {r3.text[:300]}"}
 
-        # uidb36 is base-36 encoded numeric user ID — more reliable than user_id from response
+        # Resolve username from uidb36 (base-36 → numeric ID)
         try:
             numeric_uid = str(int(uidb36, 36))
         except Exception:
@@ -156,7 +200,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         return {"success": True, "username": username, "password": raw_pass}
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"Unexpected error: {e}"}
 
 
 if __name__ == "__main__":

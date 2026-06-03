@@ -2,14 +2,19 @@ import { Router } from "express";
 import { ResetPasswordBody } from "@workspace/api-zod";
 import { spawn } from "child_process";
 import path from "path";
+import fs from "fs";
 
 const router = Router();
 
 const SCRIPT = path.resolve(__dirname, "../../scripts/reset_pass.py");
 
+// Use venv Python if available (production), fallback to system python3 (dev)
+const VENV_PYTHON = path.resolve(process.cwd(), ".venv/bin/python3");
+const PYTHON = fs.existsSync(VENV_PYTHON) ? VENV_PYTHON : "python3";
+
 function runPython(args: string[]): Promise<{ success: boolean; username?: string | null; password?: string | null; error?: string | null }> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("python3", [SCRIPT, ...args]);
+    const proc = spawn(PYTHON, [SCRIPT, ...args]);
     let stdout = "";
     let stderr = "";
 
