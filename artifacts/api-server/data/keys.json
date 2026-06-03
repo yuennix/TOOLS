@@ -59,6 +59,16 @@
       "active": true,
       "used": true,
       "usedAt": "2026-06-03T15:21:16.798Z"
+    },
+    {
+      "id": "49176e65-b7b7-423f-88b9-708ba7695141",
+      "name": "yy",
+      "key": "WEYN-APQ8-MRRO-02YT",
+      "createdAt": "2026-06-03T15:26:29.985Z",
+      "expiresAt": "2026-06-03T16:26:45.424Z",
+      "active": true,
+      "used": true,
+      "usedAt": "2026-06-03T15:26:54.510Z"
     }
   ]
 }

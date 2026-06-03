@@ -96,9 +96,7 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         # Parse uidb36 and token from the reset link
         try:
             uidb36 = reset_link.split("uidb36=")[1].split("&")[0]
-            token_raw = reset_link.split("token=")[1].split("&")[0]
-            # Token is everything before the first ":" if present
-            token = token_raw.split(":")[0] if ":" in token_raw else token_raw
+            token = reset_link.split("token=")[1].split("&")[0]
         except (IndexError, ValueError) as e:
             return {"success": False, "error": f"Could not parse reset link: {e}"}
 
