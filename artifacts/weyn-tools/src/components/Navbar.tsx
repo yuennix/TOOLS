@@ -68,7 +68,7 @@ export default function Navbar() {
           {/* Session countdown — only on protected pages when expiry is set */}
           {isProtected && countdown && (
             <span
-              className="hidden sm:flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 transition-colors duration-300"
+              className="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 transition-colors duration-300"
               style={{
                 border: `1px solid ${urgent ? "#ef444466" : "var(--line)"}`,
                 borderRadius: "5px",

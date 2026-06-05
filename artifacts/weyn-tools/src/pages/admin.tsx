@@ -26,8 +26,8 @@ function adminHeaders(): Record<string, string> {
 
 function keyCategory(k: Key): "pending" | "approved" | "used" | "expired" {
   if (!k.active) return "pending";
-  if (k.used) return "used";
   if (k.expiresAt && new Date() > new Date(k.expiresAt)) return "expired";
+  if (k.used) return "used";
   return "approved";
 }
 

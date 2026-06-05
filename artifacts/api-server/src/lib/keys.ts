@@ -109,10 +109,9 @@ export function verifyAndConsumeKey(keyStr: string): { valid: boolean; expiresAt
   if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
     return { valid: false, error: "Key has expired" };
   }
-  if (!found.used) {
-    found.used = true;
-    found.usedAt = new Date().toISOString();
-    writeKeys(keys);
-  }
+  if (found.used) return { valid: false, error: "Key has already been used on another device" };
+  found.used = true;
+  found.usedAt = new Date().toISOString();
+  writeKeys(keys);
   return { valid: true, expiresAt: found.expiresAt };
 }
