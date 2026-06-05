@@ -1,8 +1,10 @@
+import os
+import re
 import json
 import string
 import random
 import uuid
-import re
+import time
 from datetime import datetime
 import requests
 
@@ -16,7 +18,7 @@ def generate_device_info(custom_password=None):
         f"{random.choice(['720x1280','1080x1920','1440x2560'])}; "
         f"{random.choice(['samsung','xiaomi','huawei','oneplus','google'])}; "
         f"{random.choice(['SM-G975F','Mi-9T','P30-Pro','ONEPLUS-A6003','Pixel-4'])}; "
-        f"intel; en_US; {random.randint(100000000, 999999999)})"
+        f"intel; en_US; {random.randint(100000000,999999999)})"
     )
     WATERFALL_ID = str(uuid.uuid4())
     timestamp = int(datetime.now().timestamp())
@@ -24,7 +26,7 @@ def generate_device_info(custom_password=None):
         raw_pass = custom_password
     else:
         nums = ''.join([str(random.randint(1, 100)) for _ in range(4)])
-        raw_pass = f'@pass{nums}'
+        raw_pass = f'@hasu{nums}'
     PASSWORD = f'#PWD_INSTAGRAM:0:{timestamp}:{raw_pass}'
     return ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass
 
@@ -39,18 +41,12 @@ def make_headers(mid="", user_agent=""):
     }
 
 
-def id_user(user_id, user_agent=""):
+def id_user(user_id):
     try:
         url = f"https://i.instagram.com/api/v1/users/{user_id}/info/"
-        ua = user_agent or "Instagram 394.0.0.46.81 Android (30/11; 480dpi; 1080x1920; samsung; SM-G975F; intel; en_US; 123456789)"
-        headers = {
-            "User-Agent": ua,
-            "X-IG-App-ID": "567067343352427",
-            "Accept-Language": "en-US",
-        }
+        headers = {"User-Agent": "Instagram 219.0.0.12.117 Android"}
         r = requests.get(url, headers=headers, timeout=10)
-        data = r.json()
-        return data.get("user", {}).get("username") or None
+        return r.json()["user"]["username"]
     except:
         return None
 
@@ -64,43 +60,13 @@ def send_telegram(bot_token, chat_id, text):
         pass
 
 
-def extract_challenge_context(r2_text, cni):
-    """Extract challenge_context from bloks response — tries multiple patterns."""
-    cleaned = r2_text.replace('\\', '')
-
-    # Primary pattern (original)
-    try:
-        return (
-            cleaned
-            .split(f'(bk.action.i64.Const, {cni}), "')[1]
-            .split('", (bk.action.bool.Const, false)))')[0]
-        )
-    except (IndexError, ValueError):
-        pass
-
-    # Fallback: regex search for challenge_context value
-    try:
-        match = re.search(r'"challenge_context"\s*:\s*"([^"]+)"', r2_text)
-        if match:
-            return match.group(1).replace('\\/', '/')
-    except Exception:
-        pass
-
-    raise ValueError(f"Could not extract challenge_context from response. cni={cni}, snippet={r2_text[:200]}")
-
-
 def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=None):
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, raw_pass = generate_device_info(custom_password)
 
-        # Parse uidb36 and token from the reset link
-        try:
-            uidb36 = reset_link.split("uidb36=")[1].split("&")[0]
-            token = reset_link.split("token=")[1].split("&")[0]
-        except (IndexError, ValueError) as e:
-            return {"success": False, "error": f"Could not parse reset link: {e}"}
+        uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
+        token = reset_link.split("&token=")[1].split(":")[0]
 
-        # Step 1: initiate password reset
         url = "https://i.instagram.com/api/v1/accounts/password_reset/"
         data = {
             "source": "one_click_login_email",
@@ -109,25 +75,18 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "token": token,
             "waterfall_id": WATERFALL_ID
         }
-        try:
-            r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data, timeout=20)
-        except Exception as e:
-            return {"success": False, "error": f"Step 1 network error: {e}"}
+        r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data, timeout=20)
 
         if "user_id" not in r.text:
-            return {"success": False, "error": f"Step 1 failed: {r.text[:300]}"}
+            return {"success": False, "error": f"Step 1 failed: {r.text}"}
 
-        try:
-            mid = r.headers.get("Ig-Set-X-Mid", "")
-            resp_json = r.json()
-            user_id = resp_json.get("user_id")
-            cni = resp_json.get("cni")
-            nonce_code = resp_json.get("nonce_code")
-            challenge_context = resp_json.get("challenge_context")
-        except Exception as e:
-            return {"success": False, "error": f"Step 1 parse error: {e} — {r.text[:200]}"}
+        mid = r.headers.get("Ig-Set-X-Mid", "")
+        resp_json = r.json()
+        user_id = resp_json.get("user_id")
+        cni = resp_json.get("cni")
+        nonce_code = resp_json.get("nonce_code")
+        challenge_context = resp_json.get("challenge_context")
 
-        # Step 2: get challenge context
         url2 = "https://i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/"
         data2 = {
             "user_id": str(user_id),
@@ -138,17 +97,14 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "bloks_versioning_id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
             "get_challenge": "true"
         }
-        try:
-            r2 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data2, timeout=20).text
-        except Exception as e:
-            return {"success": False, "error": f"Step 2 network error: {e}"}
+        r2 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data2, timeout=20).text
 
-        try:
-            challenge_context_final = extract_challenge_context(r2, cni)
-        except ValueError as e:
-            return {"success": False, "error": str(e)}
+        challenge_context_final = (
+            r2.replace('\\', '')
+            .split(f'(bk.action.i64.Const, {cni}), "')[1]
+            .split('", (bk.action.bool.Const, false)))')[0]
+        )
 
-        # Step 3: submit new password — exact structure from resetpass.py
         data3 = {
             "is_caa": "False",
             "source": "",
@@ -167,22 +123,11 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
             "enc_new_password1": PASSWORD,
             "enc_new_password2": PASSWORD
         }
-        try:
-            r3 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
-        except Exception as e:
-            return {"success": False, "error": f"Step 3 network error: {e}"}
+        requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3, timeout=20)
 
-        if r3.status_code >= 400:
-            return {"success": False, "error": f"Step 3 failed [{r3.status_code}]: {r3.text[:300]}"}
-
-        # Resolve username from uidb36 (base-36 → numeric ID)
-        try:
-            numeric_uid = str(int(uidb36, 36))
-        except Exception:
-            numeric_uid = str(user_id)
-        username = id_user(numeric_uid, USER_AGENT)
-
+        username = id_user(str(user_id))
         display_username = username if username else f"uid:{user_id}"
+
         msg = (
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"   WEYN INSTAGRAM RESET PASS\n"

@@ -1,0 +1,280 @@
+######HASU ON TOP #############
+
+import os
+import sys
+import re
+import json
+import string
+import random
+import hashlib
+import secrets
+import uuid
+import time
+from datetime import datetime
+from threading import Thread, Timer
+import requests
+import httpx
+from requests import post as pp
+from user_agent import generate_user_agent
+from random import choice, randrange
+from cfonts import render, say
+from colorama import Fore, Style, init
+###### H4&U ON TOP ######
+E = '\033[1;31m'
+W9 = "\033[1m\033[34m"
+M = '\x1b[1;37m'
+HH = '\033[1;34m'
+R = '\033[1;31;40m'
+F = '\033[1;32;40m'
+C = "\033[1;97;40m"
+B = '\033[1;36;40m'
+C1 = '\x1b[38;5;120m'
+P1 = '\x1b[38;5;150m'
+P2 = '\x1b[38;5;190m'
+E = '\033[1;31m'
+Y = '\033[1;33m'
+Z = '\033[1;31m' 
+X = '\033[1;33m' 
+Z1 = '\033[2;31m' 
+F = '\033[2;32f' 
+A = '\033[2;34m'
+C = '\033[2;35c' 
+S = '\033[2;36m'
+G = '\033[1;34m' 
+HH = '\033[1;34m' 
+O = '\x1b[38;5;208m'
+Y = '\033[1;34m'
+C = '\033[2;35c'
+M = '\x1b[1;37m'
+
+###### H4SU ON TOP ######
+header = render('HASU BHAI', font='slick', colors=['white', 'red'], align='center')
+
+print(header)
+import os
+import sys
+import re
+import json
+import string
+import random
+import hashlib
+import uuid
+import time
+from datetime import datetime
+from threading import Thread
+import requests
+from requests import post as pp
+from user_agent import generate_user_agent
+from random import choice, randrange
+from cfonts import render, say
+from colorama import Fore, Style, init
+import webbrowser
+import os
+import random
+from random import choice
+from threading import Thread, Lock 
+import requests
+from user_agent import generate_user_agent
+from hashlib import md5
+from bs4 import BeautifulSoup
+import base64
+import secrets
+from hashlib import md5
+try:
+    import requests
+    import pyfiglet
+    from rich.console import Console
+    from cfonts import render, say
+except ImportError:
+    os.system("pip install requests telethon pyfiglet rich cfonts")
+    
+import time
+b = random.randint(5,208)
+bo = f'\x1b[38;5;{b}m'
+ED='\x1b[38;5;208m'
+BLUE = '\033[94m'
+Z = '\033[1;31m' 
+YELLOW = '\033[1;33m' 
+import requests, random, string, uuid
+from datetime import datetime
+import base64
+import json
+J = '\033[2;36m'
+N = '\033[1;37m'
+def banner():
+	WDEH = render('{END}', colors=['red', 'white'], align='center')	
+banner()
+print("♡" * 60)
+chat_id = input("   𝑬𝒏𝒕𝒆𝒓 𝑰𝒅 ➪ ")
+
+bot_token = input("   𝑬𝒏𝒕𝒆𝒓 𝑻𝒐𝒌𝒆𝒏 ➪ ")
+def send_telegram(bot_token, chat_id, text):
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    try:
+        r = requests.post(url, data=payload, timeout=10)
+        return r.json()
+    except Exception as e:
+        print("[-] Telegram send error:", e)
+        return None
+def generate_device_info():
+    ANDROID_ID = f"android-{''.join(random.choices(string.hexdigits.lower(), k=16))}"
+    USER_AGENT = f"Instagram 394.0.0.46.81 Android ({random.choice(['28/9','29/10','30/11','31/12'])}; {random.choice(['240dpi','320dpi','480dpi'])}; {random.choice(['720x1280','1080x1920','1440x2560'])}; {random.choice(['samsung','xiaomi','huawei','oneplus','google'])}; {random.choice(['SM-G975F','Mi-9T','P30-Pro','ONEPLUS-A6003','Pixel-4'])}; intel; en_US; {random.randint(100000000,999999999)})"
+    WATERFALL_ID = str(uuid.uuid4())
+    timestamp = int(datetime.now().timestamp())
+    nums = ''.join([str(random.randint(1, 100)) for _ in range(4)])
+    PASSWORD = f'#PWD_INSTAGRAM:0:{timestamp}:@hasu{nums}'
+    return ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD
+
+def make_headers(mid="", user_agent=""):
+    return {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Bloks-Version-Id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
+        "X-Mid": mid,
+        "User-Agent": user_agent,
+        "Content-Length": "9481"
+    }
+
+
+
+
+def id_user(user_id):
+	try:
+		url = f"https://i.instagram.com/api/v1/users/{user_id}/info/"
+		
+		headers = {
+		    "User-Agent": "Instagram 219.0.0.12.117 Android"
+		}
+		
+		r = requests.get(url, headers=headers)
+		
+		try:
+		    username = r.json()["user"]["username"]
+		    return username
+		except:
+		    print("Failed:", r.text)
+	except:pass	    
+	    
+	    
+def reset_instagram_password(reset_link):
+    try:
+        
+        ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD = generate_device_info()
+        uidb36 = reset_link.split("uidb36=")[1].split("&token=")[0]
+        token = reset_link.split("&token=")[1].split(":")[0]
+
+        url = "https://i.instagram.com/api/v1/accounts/password_reset/"
+        data = {
+            "source": "one_click_login_email",
+            "uidb36": uidb36,
+            "device_id": ANDROID_ID,
+            "token": token,
+            "waterfall_id": WATERFALL_ID
+        }
+        r = requests.post(url, headers=make_headers(user_agent=USER_AGENT), data=data)
+        
+        if "user_id" not in r.text:
+            return {"success": False, "error": f"Error in reset request: {r.text}"}
+
+        mid = r.headers.get("Ig-Set-X-Mid")
+        resp_json = r.json()
+        user_id = resp_json.get("user_id")
+        cni = resp_json.get("cni")
+        nonce_code = resp_json.get("nonce_code")
+        challenge_context = resp_json.get("challenge_context")
+
+        url2 = "https://i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/"
+        data2 = {
+            "user_id": str(user_id),
+            "cni": str(cni),
+            "nonce_code": str(nonce_code),
+            "bk_client_context": '{"bloks_version":"e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd","styles_id":"instagram"}',
+            "challenge_context": str(challenge_context),
+            "bloks_versioning_id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
+            "get_challenge": "true"
+        }
+        r2 = requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data2).text
+        
+        challenge_context_final = r2.replace('\\', '').split(f'(bk.action.i64.Const, {cni}), "')[1].split('", (bk.action.bool.Const, false)))')[0]
+
+        data3 = {
+            "is_caa": "False",
+            "source": "",
+            "uidb36": "",
+            "error_state": {"type_name":"str","index":0,"state_id":1048583541},
+            "afv": "",
+            "cni": str(cni),
+            "token": "",
+            "has_follow_up_screens": "0",
+            "bk_client_context": {"bloks_version":"e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd","styles_id":"instagram"},
+            "challenge_context": challenge_context_final,
+            "bloks_versioning_id": "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd",
+            "enc_new_password1": PASSWORD,
+            "enc_new_password2": PASSWORD
+        }
+        
+        requests.post(url2, headers=make_headers(mid, USER_AGENT), data=data3)
+        new_password = PASSWORD.split(":")[-1]
+        
+        
+        return {
+    "success": True,
+    "password": new_password,
+    "user_id": user_id
+    }
+        
+                
+    except Exception as e:
+        return False
+        
+
+
+
+def banner():
+	WDEH = render('{END}', colors=['red', 'white'], align='center')
+	
+
+
+
+
+######HASU ON TOP #############
+
+def main():
+    
+    banner()
+   
+    reset_link = input("   𝑬𝒏𝒕𝒆𝒓 𝑹𝒆𝒔𝒕 𝑳𝒊𝒏𝒌 ➪ :")
+    print("\n")
+    result = reset_instagram_password(reset_link)
+    if result.get("success"):
+                                    	    	
+                                    	    	
+                                    	    	user_id = result.get("user_id")
+                                    	    	new_password = result.get("password")
+                                    	    	username = id_user(user_id)
+                                    	    	msg = f'''
+━━━━━━━━━𝑯𝑨𝑺𝑼━━━━━━━━━━
+
+
+𝑵𝒆𝒘 𝑷𝒂𝒔𝒔𝒘𝒐𝒓𝒅 ➪  {new_password}
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━
+𝑩𝒚 ➪ @HASU_Hu 
+━━━━━━━━━━━━━━━━━━━━━━━
+'''
+                                    	    	print(msg)                                    	    	
+                                    	    	
+                                    	    	send_telegram(bot_token, chat_id, msg)
+                                    	    	print("\nDone ✅")
+                                    	    	
+                                    		              	       
+    else:pass
+                  
+if __name__ == "__main__":
+    main()
+    
+    	
+######HASU ON TOP #############
+    
