@@ -41,7 +41,7 @@ externalPort = 80
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "export PATH=/home/runner/workspace/.venv/bin:$PATH && PORT=5000 NODE_ENV=production node artifacts/api-server/dist/index.js"]
-build = ["bash", "-c", "uv venv .venv && uv pip install --python .venv/bin/python3 -r requirements.txt && pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/"]
+build = ["bash", "-c", "uv venv --clear .venv && uv pip install --python .venv/bin/python3 -r requirements.txt && pnpm install && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/weyn-tools run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/weyn-tools/dist/. artifacts/api-server/dist/public/"]
 
 [userenv]
 
