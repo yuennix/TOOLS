@@ -71,6 +71,16 @@ export default function Admin() {
   const [customUnit, setCustomUnit] = useState<CustomUnit>("hours");
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  // Generate key panel
+  const [genOpen, setGenOpen] = useState(false);
+  const [genName, setGenName] = useState("");
+  const [genPreset, setGenPreset] = useState<ExpiryPreset>("24h");
+  const [genCustomVal, setGenCustomVal] = useState("");
+  const [genCustomUnit, setGenCustomUnit] = useState<CustomUnit>("hours");
+  const [genLoading, setGenLoading] = useState(false);
+  const [genResult, setGenResult] = useState<{ key: string; expiresAt: string | null } | null>(null);
+  const [genCopied, setGenCopied] = useState(false);
+
   const loadKeys = useCallback(async () => {
     setLoading(true);
     try {
@@ -116,6 +126,32 @@ export default function Admin() {
     setExpiryPreset("24h");
     setCustomVal("");
     setCustomUnit("hours");
+  }
+
+  async function generateKey() {
+    const expiresAt = computeExpiry(genPreset, genCustomVal, genCustomUnit);
+    if (genPreset === "custom" && !expiresAt) {
+      toast({ title: "Invalid duration", description: "Enter a positive number", variant: "destructive" });
+      return;
+    }
+    setGenLoading(true);
+    setGenResult(null);
+    try {
+      const res = await fetch("/api/admin/keys/generate", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify({ name: genName.trim() || null, expiresAt }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setGenResult({ key: data.key.key, expiresAt: data.key.expiresAt });
+      setGenCopied(false);
+      loadKeys();
+    } catch {
+      toast({ title: "Error", description: "Failed to generate key", variant: "destructive" });
+    } finally {
+      setGenLoading(false);
+    }
   }
 
   async function confirmApprove(id: string) {
@@ -271,6 +307,131 @@ export default function Admin() {
             <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>{s.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Generate Key panel */}
+      <div style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)", overflow: "hidden" }}>
+        <button
+          type="button"
+          onClick={() => { setGenOpen((o) => !o); setGenResult(null); }}
+          className="w-full flex items-center justify-between px-4 py-3 text-left"
+          style={{ background: "none", border: "none", cursor: "pointer" }}
+        >
+          <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>+ Generate New Key</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            style={{ color: "var(--text-muted)", transform: genOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        {genOpen && (
+          <div className="px-4 pb-4 space-y-4" style={{ borderTop: "1px solid var(--line)" }}>
+            {/* Name input */}
+            <div className="space-y-1.5 pt-3">
+              <label className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>
+                LABEL / USER NAME <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={genName}
+                onChange={(e) => setGenName(e.target.value)}
+                placeholder="e.g. John"
+                className="w-full px-3 py-2 text-sm transition-all"
+                style={{ border: "1px solid var(--line)", borderRadius: "6px", background: "var(--surface)", color: "var(--text-primary)", outline: "none" }}
+                onFocus={(e) => { e.target.style.borderColor = "var(--red-accent)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "var(--line)"; }}
+              />
+            </div>
+
+            {/* Expiry presets */}
+            <div className="space-y-2">
+              <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>EXPIRY</p>
+              <div className="flex flex-wrap gap-2">
+                {(["1h", "24h", "72h", "custom"] as ExpiryPreset[]).map((p) => (
+                  <button key={p} type="button" onClick={() => setGenPreset(p)}
+                    className="px-3 py-1 text-xs font-mono transition-all duration-150"
+                    style={{
+                      border: `1px solid ${genPreset === p ? "var(--red-accent)" : "var(--line)"}`,
+                      borderRadius: "5px",
+                      background: genPreset === p ? "var(--red-accent)" : "transparent",
+                      color: genPreset === p ? "#fff" : "var(--text-muted)",
+                      cursor: "pointer",
+                    }}>
+                    {p === "1h" ? "1 HOUR" : p === "24h" ? "24 HOURS" : p === "72h" ? "72 HOURS" : "CUSTOM"}
+                  </button>
+                ))}
+              </div>
+
+              {genPreset === "custom" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" min="1" value={genCustomVal}
+                    onChange={(e) => setGenCustomVal(e.target.value)}
+                    placeholder="e.g. 90"
+                    className="w-28 px-3 py-1.5 text-xs font-mono transition-all"
+                    style={{ border: "1px solid var(--line)", borderRadius: "6px", background: "var(--surface)", color: "var(--text-primary)", outline: "none" }}
+                    onFocus={(e) => { e.target.style.borderColor = "var(--red-accent)"; }}
+                    onBlur={(e) => { e.target.style.borderColor = "var(--line)"; }}
+                  />
+                  <div className="flex" style={{ border: "1px solid var(--line)", borderRadius: "6px", overflow: "hidden" }}>
+                    {(["minutes", "hours"] as CustomUnit[]).map((u, i) => (
+                      <button key={u} type="button" onClick={() => setGenCustomUnit(u)}
+                        className="px-3 py-1.5 text-xs font-mono transition-all duration-150"
+                        style={{
+                          background: genCustomUnit === u ? "var(--red-accent)" : "transparent",
+                          color: genCustomUnit === u ? "#fff" : "var(--text-muted)",
+                          border: "none", borderLeft: i === 1 ? "1px solid var(--line)" : "none", cursor: "pointer",
+                        }}>
+                        {u === "minutes" ? "MINS" : "HRS"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Generate button */}
+            <button
+              type="button"
+              onClick={generateKey}
+              disabled={genLoading || (genPreset === "custom" && (!genCustomVal || parseFloat(genCustomVal) <= 0))}
+              className="px-4 py-2 text-xs font-mono font-semibold transition-all duration-150"
+              style={{
+                border: "1px solid var(--red-accent)",
+                borderRadius: "6px",
+                background: "var(--red-accent)",
+                color: "#fff",
+                cursor: genLoading ? "not-allowed" : "pointer",
+                opacity: (genPreset === "custom" && (!genCustomVal || parseFloat(genCustomVal) <= 0)) ? 0.4 : 1,
+              }}>
+              {genLoading ? "Generating..." : "Generate Key"}
+            </button>
+
+            {/* Result */}
+            {genResult && (
+              <div className="space-y-2 p-3" style={{ border: "1.5px solid var(--red-accent)", borderRadius: "8px", background: "var(--surface)" }}>
+                <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>KEY GENERATED</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm tracking-widest flex-1 break-all" style={{ color: "var(--red-accent)" }}>
+                    {genResult.key}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(genResult.key); setGenCopied(true); setTimeout(() => setGenCopied(false), 2000); }}
+                    className="shrink-0 px-2 py-1 text-xs font-mono transition-all"
+                    style={{ border: "1px solid var(--red-accent)", borderRadius: "5px", background: genCopied ? "var(--red-accent)" : "transparent", color: genCopied ? "#fff" : "var(--red-accent)", cursor: "pointer" }}>
+                    {genCopied ? "✓ COPIED" : "COPY"}
+                  </button>
+                </div>
+                {genResult.expiresAt && (
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    Expires: {fmtShort(genResult.expiresAt)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Filter tabs */}

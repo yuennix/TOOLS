@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-type Tab = "enter" | "generate";
-
 function isAccessValid() {
   if (localStorage.getItem("weyn-access") !== "1") return false;
   const expiry = localStorage.getItem("weyn-key-expiry");
@@ -21,21 +19,11 @@ export default function Access() {
   useEffect(() => {
     if (isAccessValid()) setLocation("/");
   }, [setLocation]);
-  const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>("generate");
 
-  // Enter tab
+  const { toast } = useToast();
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Generate tab
-  const [name, setName] = useState("");
-  const [nameError, setNameError] = useState("");
-  const [genLoading, setGenLoading] = useState(false);
-  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
-  const [generatedName, setGeneratedName] = useState("");
-  const [copied, setCopied] = useState(false);
 
   async function handleEnter(e: React.FormEvent) {
     e.preventDefault();
@@ -68,48 +56,6 @@ export default function Access() {
     }
   }
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { setNameError("Name is required"); return; }
-    setGenLoading(true);
-    setNameError("");
-    try {
-      const res = await fetch("/api/auth/request-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok && data.key) {
-        setGeneratedKey(data.key);
-        setGeneratedName(data.name);
-        setCopied(false);
-      } else {
-        setNameError(data.error ?? "Failed to generate key");
-      }
-    } catch {
-      setNameError("Connection error. Try again.");
-    } finally {
-      setGenLoading(false);
-    }
-  }
-
-  function copyKey() {
-    if (!generatedKey) return;
-    navigator.clipboard.writeText(generatedKey).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
-
-  function resetGenerate() {
-    setGeneratedKey(null);
-    setGeneratedName("");
-    setName("");
-    setNameError("");
-    setCopied(false);
-  }
-
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -129,7 +75,7 @@ export default function Access() {
             WEYN
           </h1>
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Enter your access key or generate a new one below.
+            Enter the access key provided by the admin.
           </p>
         </div>
 
@@ -146,174 +92,38 @@ export default function Access() {
           </Link>
         </div>
 
-        {/* Tab switcher */}
-        <div
-          className="flex"
-          style={{ border: "1px solid var(--line)", borderRadius: "8px", overflow: "hidden" }}
-        >
-          {(["enter", "generate"] as Tab[]).map((t, i) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => { setTab(t); setError(""); }}
-              className="flex-1 py-3 text-xs font-mono tracking-[0.15em] uppercase font-semibold transition-all duration-150"
-              style={{
-                background: tab === t ? "var(--red-accent)" : "transparent",
-                color: tab === t ? "#fff" : "var(--text-muted)",
-                border: "none",
-                borderLeft: i === 1 ? "1px solid var(--line)" : "none",
-                cursor: "pointer",
-              }}
-            >
-              {t === "enter" ? "ENTER KEY" : "GENERATE KEY"}
-            </button>
-          ))}
-        </div>
-
-        {/* Card */}
+        {/* Enter key card */}
         <div
           className="p-5 space-y-4"
           style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)" }}
         >
-          {/* ── ENTER KEY tab ── */}
-          {tab === "enter" && (
-            <form onSubmit={handleEnter} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Access Key
-                </label>
-                <input
-                  type="text"
-                  value={key}
-                  onChange={(e) => { setKey(e.target.value.toUpperCase()); setError(""); }}
-                  placeholder="WEYN-XXXX-XXXX-XXXX"
-                  className="w-full px-4 py-3 font-mono text-sm tracking-widest transition-all duration-200"
-                  style={{
-                    border: error ? "1px solid #ef4444" : "1px solid var(--line)",
-                    borderRadius: "8px",
-                    background: "var(--surface)",
-                    color: "var(--text-primary)",
-                    outline: "none",
-                  }}
-                  onFocus={(e) => { if (!error) e.target.style.borderColor = "var(--red-accent)"; }}
-                  onBlur={(e) => { if (!error) e.target.style.borderColor = "var(--line)"; }}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                {error && <p className="text-xs font-mono" style={{ color: "#ef4444" }}>✗ {error}</p>}
-              </div>
-              <ActionBtn loading={loading} label="Validate Key" />
-            </form>
-          )}
-
-          {/* ── GENERATE KEY tab ── */}
-          {tab === "generate" && !generatedKey && (
-            <form onSubmit={handleGenerate} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Your Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => { setName(e.target.value); setNameError(""); }}
-                  placeholder="Enter your name"
-                  className="w-full px-4 py-3 text-sm transition-all duration-200"
-                  style={{
-                    border: nameError ? "1px solid #ef4444" : "1px solid var(--line)",
-                    borderRadius: "8px",
-                    background: "var(--surface)",
-                    color: "var(--text-primary)",
-                    outline: "none",
-                  }}
-                  onFocus={(e) => { if (!nameError) e.target.style.borderColor = "var(--red-accent)"; }}
-                  onBlur={(e) => { if (!nameError) e.target.style.borderColor = "var(--line)"; }}
-                  autoComplete="off"
-                />
-                {nameError && <p className="text-xs font-mono" style={{ color: "#ef4444" }}>✗ {nameError}</p>}
-              </div>
-              <ActionBtn loading={genLoading} label="Generate Key" />
-            </form>
-          )}
-
-          {/* ── Generated key result ── */}
-          {tab === "generate" && generatedKey && (
-            <div className="space-y-4">
-              {/* Title */}
-              <div className="space-y-1">
-                <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Key generated for{" "}
-                  <span style={{ color: "var(--red-accent)" }}>{generatedName}</span>
-                </p>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Save this key — you'll need it to access the tools once approved.
-                </p>
-              </div>
-
-              {/* Key box */}
-              <div
-                className="flex items-center gap-2 px-3 py-3"
-                style={{ border: "1.5px solid var(--red-accent)", borderRadius: "8px", background: "var(--surface)" }}
-              >
-                <span
-                  className="font-mono text-sm tracking-widest flex-1 select-all break-all"
-                  style={{ color: "var(--red-accent)" }}
-                >
-                  {generatedKey}
-                </span>
-                <button
-                  type="button"
-                  onClick={copyKey}
-                  className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-mono font-semibold transition-all"
-                  style={{
-                    border: "1px solid var(--red-accent)",
-                    borderRadius: "5px",
-                    background: copied ? "var(--red-accent)" : "transparent",
-                    color: copied ? "#fff" : "var(--red-accent)",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {copied ? "✓" : (
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                  )}
-                  {copied ? "COPIED" : "COPY"}
-                </button>
-              </div>
-
-              {/* Pending notice */}
-              <div
-                className="p-3 space-y-1"
+          <form onSubmit={handleEnter} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Access Key
+              </label>
+              <input
+                type="text"
+                value={key}
+                onChange={(e) => { setKey(e.target.value.toUpperCase()); setError(""); }}
+                placeholder="WEYN-XXXX-XXXX-XXXX"
+                className="w-full px-4 py-3 font-mono text-sm tracking-widest transition-all duration-200"
                 style={{
-                  border: "1px solid var(--line)",
+                  border: error ? "1px solid #ef4444" : "1px solid var(--line)",
                   borderRadius: "8px",
                   background: "var(--surface)",
+                  color: "var(--text-primary)",
+                  outline: "none",
                 }}
-              >
-                <p className="text-xs font-mono leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                  <span style={{ color: "var(--red-accent)" }}>!</span>{" "}
-                  Your key is pending admin approval. Once approved, enter it in the "Enter Key" tab to access the tools. Each key works once only.
-                </p>
-              </div>
-
-              {/* Generate another */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={resetGenerate}
-                  className="text-sm transition-colors duration-150"
-                  style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
-                >
-                  Generate another key
-                </button>
-              </div>
+                onFocus={(e) => { if (!error) e.target.style.borderColor = "var(--red-accent)"; }}
+                onBlur={(e) => { if (!error) e.target.style.borderColor = "var(--line)"; }}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {error && <p className="text-xs font-mono" style={{ color: "#ef4444" }}>✗ {error}</p>}
             </div>
-          )}
+            <ActionBtn loading={loading} />
+          </form>
         </div>
 
       </div>
@@ -321,7 +131,7 @@ export default function Access() {
   );
 }
 
-function ActionBtn({ loading, label }: { loading: boolean; label: string }) {
+function ActionBtn({ loading }: { loading: boolean }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -331,8 +141,8 @@ function ActionBtn({ loading, label }: { loading: boolean; label: string }) {
       style={{
         borderRadius: "8px",
         border: "1.5px solid var(--red-accent)",
-        background: "transparent",
-        color: loading ? "var(--text-muted)" : "var(--red-accent)",
+        background: loading ? "transparent" : hovered ? "var(--red-accent)" : "transparent",
+        color: loading ? "var(--text-muted)" : hovered ? "#ffffff" : "var(--red-accent)",
         cursor: loading ? "not-allowed" : "pointer",
         boxShadow: hovered && !loading ? "0 0 10px var(--red-glow-strong)" : "none",
       }}
@@ -343,9 +153,9 @@ function ActionBtn({ loading, label }: { loading: boolean; label: string }) {
         <span className="flex items-center justify-center gap-2">
           <span className="inline-block w-3 h-3 border-2 rounded-full animate-spin"
             style={{ borderColor: "var(--red-accent)", borderTopColor: "transparent" }} />
-          {label === "Validate Key" ? "Validating..." : "Generating..."}
+          Validating...
         </span>
-      ) : label}
+      ) : "Validate Key"}
     </button>
   );
 }
