@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,9 +13,12 @@ type Result = {
 export default function ResetPass() {
   const { toast } = useToast();
   const [resetLinksText, setResetLinksText] = useState("");
-  const [chatId, setChatId] = useState("");
-  const [botToken, setBotToken] = useState("");
+  const [chatId, setChatId] = useState(() => localStorage.getItem("weyn-chat-id") ?? "");
+  const [botToken, setBotToken] = useState(() => localStorage.getItem("weyn-bot-token") ?? "");
   const [customPassword, setCustomPassword] = useState("");
+
+  useEffect(() => { localStorage.setItem("weyn-chat-id", chatId); }, [chatId]);
+  useEffect(() => { localStorage.setItem("weyn-bot-token", botToken); }, [botToken]);
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
 
