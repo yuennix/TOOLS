@@ -129,10 +129,10 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         display_username = username if username else f"uid:{user_id}"
 
         msg = (
-            f"Hola! Your Password has been changed! 🎉\n\n"
-            f"Username: @{display_username}\n"
-            f"Password: {raw_pass}\n\n"
-            f"— WEYN Tools by @jinbelowg"
+            f"𝓗𝓸𝓵𝓪! 𝓨𝓸𝓾𝓻 𝓹𝓪𝓼𝓼𝔀𝓸𝓻𝓭 𝓱𝓪𝓼 𝓫𝓮𝓮𝓷 𝓬𝓱𝓪𝓷𝓰𝓮𝓭.\n\n"
+            f"ᵁˢᵉʳⁿᵃᵐᵉ: @{display_username}\n"
+            f"ᴱᵐᵃⁱˡ: —\n"
+            f"ᴾᵃˢˢʷᵒʳᵈ: {raw_pass}"
         )
         send_telegram(bot_token, chat_id, msg)
 

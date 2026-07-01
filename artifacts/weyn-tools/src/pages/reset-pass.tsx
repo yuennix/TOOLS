@@ -323,7 +323,7 @@ function BotMessageCard({ username, password }: { username: string; password: st
   const [copied, setCopied] = useState(false);
 
   const messageText =
-    `Hola! Your Password has been changed! 🎉\n\nUsername: @${username}\nPassword: ${password}\n\n— WEYN Tools by @jinbelowg`;
+    `𝓗𝓸𝓵𝓪! 𝓨𝓸𝓾𝓻 𝓹𝓪𝓼𝓼𝔀𝓸𝓻𝓭 𝓱𝓪𝓼 𝓫𝓮𝓮𝓷 𝓬𝓱𝓪𝓷𝓰𝓮𝓭.\n\nᵁˢᵉʳⁿᵃᵐᵉ: @${username}\nᴱᵐᵃⁱˡ: —\nᴾᵃˢˢʷᵒʳᵈ: ${password}`;
 
   function copyAll() {
     navigator.clipboard.writeText(messageText).then(() => {
@@ -363,21 +363,22 @@ function BotMessageCard({ username, password }: { username: string; password: st
         {/* Message lines */}
         <div className="space-y-1" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
           <p className="font-extrabold text-sm" style={{ color: "#fff", lineHeight: 1.4 }}>
-            Hola! Your Password has been changed! 🎉
+            𝓗𝓸𝓵𝓪! 𝓨𝓸𝓾𝓻 𝓹𝓪𝓼𝓼𝔀𝓸𝓻𝓭 𝓱𝓪𝓼 𝓫𝓮𝓮𝓷 𝓬𝓱𝓪𝓷𝓰𝓮𝓭.
           </p>
           <div className="pt-1 space-y-0.5">
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
-              <span style={{ color: "rgba(100,180,255,0.8)", fontWeight: 700 }}>Username:</span>{" "}
+              <span style={{ color: "rgba(100,180,255,0.8)" }}>ᵁˢᵉʳⁿᵃᵐᵉ:</span>{" "}
               <span className="font-mono font-bold" style={{ color: "#fff" }}>@{username}</span>
             </p>
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
-              <span style={{ color: "rgba(100,180,255,0.8)", fontWeight: 700 }}>Password:</span>{" "}
+              <span style={{ color: "rgba(100,180,255,0.8)" }}>ᴱᵐᵃⁱˡ:</span>{" "}
+              <span className="font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>—</span>
+            </p>
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
+              <span style={{ color: "rgba(100,180,255,0.8)" }}>ᴾᵃˢˢʷᵒʳᵈ:</span>{" "}
               <span className="font-mono font-bold" style={{ color: "#7dd3fc" }}>{password}</span>
             </p>
           </div>
-          <p className="text-xs pt-1" style={{ color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
-            — WEYN Tools by @jinbelowg
-          </p>
         </div>
 
         {/* Time-style stamp like Telegram */}
