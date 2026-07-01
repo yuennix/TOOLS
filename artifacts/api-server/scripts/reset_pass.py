@@ -129,14 +129,10 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         display_username = username if username else f"uid:{user_id}"
 
         msg = (
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"   WEYN INSTAGRAM RESET PASS\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"USERNAME ➪  {display_username}\n"
-            f"NEW PASSWORD ➪  {raw_pass}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"        BY: @jinbelowg\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            f"Hola! Your Password has been changed! 🎉\n\n"
+            f"Username: @{display_username}\n"
+            f"Password: {raw_pass}\n\n"
+            f"— WEYN Tools by @jinbelowg"
         )
         send_telegram(bot_token, chat_id, msg)
 
