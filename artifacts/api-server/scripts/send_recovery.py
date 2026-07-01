@@ -3,6 +3,7 @@ import random
 import ssl
 import json
 import sys
+import time
 
 jazoest_list = ["22603", "22913", "22785", "22841", "22567"]
 
@@ -32,52 +33,77 @@ def fetch_fresh_cookies(client: httpx.Client) -> dict:
             follow_redirects=True,
             timeout=15,
         )
-        cookies = dict(r.cookies)
-        return cookies
+        return dict(r.cookies)
     except Exception:
         return {}
+
+def _attempt(client: httpx.Client, email: str) -> dict:
+    cookies = fetch_fresh_cookies(client)
+    csrf = cookies.get("csrftoken", "")
+
+    headers = {
+        **BASE_HEADERS,
+        "x-csrftoken": csrf,
+        "referer": "https://www.instagram.com/accounts/password/reset/",
+    }
+
+    data = {
+        "email_or_username": email,
+        "jazoest": random.choice(jazoest_list),
+    }
+
+    r = client.post(
+        "https://www.instagram.com/api/v1/web/accounts/account_recovery_send_ajax/?hl=en",
+        headers=headers,
+        cookies=cookies,
+        data=data,
+        timeout=20,
+    )
+
+    try:
+        parsed = r.json()
+    except Exception:
+        return {"success": False, "parsed": None, "raw": r.text[:300]}
+
+    success = parsed.get("status") == "ok"
+    return {"success": success, "parsed": parsed, "raw": None}
 
 def send_recovery(email: str) -> dict:
     try:
         with httpx.Client(http2=True, verify=get_ssl_context(), timeout=25) as client:
-            cookies = fetch_fresh_cookies(client)
-            csrf = cookies.get("csrftoken", "")
+            for attempt in range(2):
+                try:
+                    result = _attempt(client, email)
+                    if result["success"]:
+                        return {
+                            "email": email,
+                            "success": True,
+                            "response": json.dumps(result["parsed"], indent=2),
+                        }
+                    if attempt == 0:
+                        time.sleep(1.5)
+                except httpx.TimeoutException:
+                    if attempt == 0:
+                        time.sleep(2)
+                    continue
+                except Exception as e:
+                    if attempt == 0:
+                        time.sleep(1)
+                    continue
 
-            headers = {
-                **BASE_HEADERS,
-                "x-csrftoken": csrf,
-                "referer": "https://www.instagram.com/accounts/password/reset/",
-            }
-
-            data = {
-                "email_or_username": email,
-                "jazoest": random.choice(jazoest_list),
-            }
-
-            r = client.post(
-                "https://www.instagram.com/api/v1/web/accounts/account_recovery_send_ajax/?hl=en",
-                headers=headers,
-                cookies=cookies,
-                data=data,
-                timeout=20,
-            )
-
-            try:
-                parsed = r.json()
-            except Exception:
-                return {"email": email, "success": False, "response": f"Non-JSON response (HTTP {r.status_code}): {r.text[:300]}"}
-
-            status = parsed.get("status", "")
-            success = status == "ok"
-
+            last = result
+            if last.get("parsed"):
+                return {
+                    "email": email,
+                    "success": False,
+                    "response": json.dumps(last["parsed"], indent=2),
+                }
             return {
                 "email": email,
-                "success": success,
-                "response": json.dumps(parsed, indent=2),
+                "success": False,
+                "response": last.get("raw") or "Unknown error after 2 attempts",
             }
 
-    except httpx.TimeoutException:
-        return {"email": email, "success": False, "response": "Request timed out"}
     except Exception as e:
         return {"email": email, "success": False, "response": str(e)}
 

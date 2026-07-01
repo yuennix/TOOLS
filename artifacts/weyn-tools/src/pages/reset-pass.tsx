@@ -280,8 +280,8 @@ function ActionButton({ loading, count }: { loading: boolean; count: number }) {
 
 function ResultCard({ result }: { result: Result; index: number }) {
   const [open, setOpen] = useState(!result.success);
-  const shortLink = result.resetLink.length > 60
-    ? result.resetLink.slice(0, 60) + "…"
+  const shortLink = result.resetLink.length > 55
+    ? result.resetLink.slice(0, 55) + "…"
     : result.resetLink;
 
   return (
@@ -289,7 +289,7 @@ function ResultCard({ result }: { result: Result; index: number }) {
       className="overflow-hidden transition-all duration-200"
       style={{
         border: `1px solid ${result.success ? "var(--red-accent)" : "var(--line)"}`,
-        borderRadius: "6px",
+        borderRadius: "10px",
         background: "var(--surface)",
         opacity: result.success ? 1 : 0.75,
       }}
@@ -332,29 +332,16 @@ function ResultCard({ result }: { result: Result; index: number }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid var(--line)" }}>
+        <div className="px-4 pb-4" style={{ borderTop: "1px solid var(--line)" }}>
           {result.success ? (
-            <div
-              className="mt-3 space-y-2 p-3"
-              style={{
-                background: "var(--surface-2)",
-                borderRadius: "6px",
-                border: "1px solid var(--line)",
-              }}
-            >
-              <Row label="Username" value={`@${result.username}`} />
-              <Row label="New Password" value={result.password ?? ""} highlight />
-              <p className="text-xs font-mono pt-1" style={{ color: "var(--text-muted)" }}>
-                ✓ Sent to Telegram
-              </p>
-            </div>
+            <SuccessCard username={result.username ?? ""} password={result.password ?? ""} />
           ) : (
             <pre
               className="mt-3 text-xs font-mono p-3 whitespace-pre-wrap break-all"
               style={{
                 background: "var(--surface-2)",
                 color: "var(--text-secondary)",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 border: "1px solid var(--line)",
               }}
             >
@@ -367,19 +354,150 @@ function ResultCard({ result }: { result: Result; index: number }) {
   );
 }
 
-function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function SuccessCard({ username, password }: { username: string; password: string }) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  function copyText(text: string, key: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 1800);
+    });
+  }
+
+  function copyAll() {
+    const text = `Hola! Your Password has been changed!\n\nUsername: @${username}\nPassword: ${password}`;
+    copyText(text, "all");
+  }
+
   return (
-    <div className="flex items-center gap-4">
-      <span className="text-xs w-28 shrink-0" style={{ color: "var(--text-muted)" }}>{label}</span>
-      <span
-        className="text-sm font-mono"
+    <div
+      className="mt-3 rounded-xl overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, #1a0a0a 0%, #120808 100%)",
+        border: "1px solid var(--red-accent)",
+        boxShadow: "0 0 20px var(--red-glow)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-5 py-4 text-center"
         style={{
-          color: highlight ? "var(--red-accent)" : "var(--text-primary)",
-          textShadow: highlight ? "0 0 8px var(--red-glow-strong)" : "none",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,60,60,0.06)",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "'Nunito', 'Quicksand', 'Varela Round', system-ui, sans-serif",
+            fontWeight: 800,
+            fontSize: "1rem",
+            color: "#fff",
+            letterSpacing: "0.01em",
+            lineHeight: 1.3,
+          }}
+        >
+          Hola! Your Password has been changed! 🎉
+        </p>
+      </div>
+
+      {/* Fields */}
+      <div className="px-5 py-4 space-y-3">
+        <CopyRow
+          label="Username"
+          value={`@${username}`}
+          onCopy={() => copyText(`@${username}`, "username")}
+          copied={copied === "username"}
+        />
+        <CopyRow
+          label="Password"
+          value={password}
+          onCopy={() => copyText(password, "password")}
+          copied={copied === "password"}
+          highlight
+        />
+      </div>
+
+      {/* Copy All button */}
+      <div className="px-5 pb-4">
+        <button
+          type="button"
+          onClick={copyAll}
+          className="w-full py-2 text-xs font-semibold transition-all duration-200 rounded-lg"
+          style={{
+            fontFamily: "'Nunito', system-ui, sans-serif",
+            background: copied === "all" ? "var(--red-accent)" : "rgba(255,60,60,0.12)",
+            color: copied === "all" ? "#fff" : "var(--red-accent)",
+            border: "1px solid var(--red-accent)",
+            cursor: "pointer",
+            letterSpacing: "0.05em",
+          }}
+        >
+          {copied === "all" ? "✓ Copied!" : "Copy All Details"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CopyRow({
+  label,
+  value,
+  onCopy,
+  copied,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  onCopy: () => void;
+  copied: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}
+    >
+      <span
+        className="text-xs shrink-0 w-20"
+        style={{
+          fontFamily: "'Nunito', system-ui, sans-serif",
+          fontWeight: 700,
+          color: "rgba(255,255,255,0.45)",
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          fontSize: "0.65rem",
+        }}
+      >
+        {label}
+      </span>
+      <span
+        className="flex-1 text-sm font-mono break-all"
+        style={{
+          color: highlight ? "var(--red-accent)" : "#fff",
+          textShadow: highlight ? "0 0 10px var(--red-glow-strong)" : "none",
+          fontWeight: highlight ? 700 : 400,
         }}
       >
         {value}
       </span>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all duration-150"
+        style={{
+          fontFamily: "'Nunito', system-ui, sans-serif",
+          background: copied ? "var(--red-accent)" : "rgba(255,60,60,0.15)",
+          color: copied ? "#fff" : "var(--red-accent)",
+          border: "1px solid rgba(255,60,60,0.3)",
+          cursor: "pointer",
+          minWidth: "52px",
+        }}
+      >
+        {copied ? "✓" : "Copy"}
+      </button>
     </div>
   );
 }
