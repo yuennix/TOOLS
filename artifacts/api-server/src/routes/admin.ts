@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { createKey, getAllKeys, deleteKey, activateKey } from "../lib/keys";
+import { getCount } from "../lib/visits";
 
 const router = Router();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
@@ -11,6 +12,16 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
   next();
 }
+
+router.post("/track-visit", (_req: Request, res: Response) => {
+  const { increment } = require("../lib/visits");
+  increment();
+  return res.json({ ok: true });
+});
+
+router.get("/admin/stats", requireAdmin, (_req: Request, res: Response) => {
+  return res.json({ visits: getCount(), users: getAllKeys().length });
+});
 
 router.post("/admin/login", (req: Request, res: Response) => {
   const { password } = req.body;

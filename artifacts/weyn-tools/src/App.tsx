@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,6 +17,11 @@ const queryClient = new QueryClient({
     queries: { retry: false, refetchOnWindowFocus: false },
   },
 });
+
+function VisitTracker() {
+  useEffect(() => { fetch("/api/track-visit", { method: "POST" }).catch(() => {}); }, []);
+  return null;
+}
 
 function Router() {
   return (
@@ -38,6 +44,7 @@ function App() {
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <div className="min-h-screen flex flex-col transition-colors duration-300" style={{ background: "var(--surface)" }}>
                 <div className="scanline-bar" />
+                <VisitTracker />
                 <Navbar />
                 <main className="flex-1">
                   <Router />
