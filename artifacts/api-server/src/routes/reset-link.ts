@@ -7,8 +7,6 @@ import fs from "fs";
 const router = Router();
 
 const SCRIPT = path.resolve(__dirname, "../../scripts/send_recovery.py");
-
-// Use venv Python if available (production), fallback to system python3 (dev)
 const VENV_PYTHON = path.resolve(process.cwd(), ".venv/bin/python3");
 const PYTHON = fs.existsSync(VENV_PYTHON) ? VENV_PYTHON : "python3";
 
@@ -21,18 +19,29 @@ function runPython(emails: string[]): Promise<{ results: Array<{ email: string; 
     proc.stdout.on("data", (chunk) => (stdout += chunk));
     proc.stderr.on("data", (chunk) => (stderr += chunk));
 
+    const timer = setTimeout(() => {
+      proc.kill();
+      reject(new Error("Script timed out after 120s"));
+    }, 120_000);
+
     proc.on("close", (code) => {
-      if (code !== 0) {
-        return reject(new Error(`Python exited ${code}: ${stderr}`));
+      clearTimeout(timer);
+      if (code !== 0 && code !== null) {
+        return reject(new Error(`Python exited ${code}: ${stderr.trim() || stdout.trim()}`));
       }
+      const raw = stdout.trim();
+      if (!raw) return reject(new Error(`No output from script. stderr: ${stderr.trim()}`));
       try {
-        resolve(JSON.parse(stdout));
+        resolve(JSON.parse(raw));
       } catch {
-        reject(new Error(`Bad JSON from Python: ${stdout}`));
+        reject(new Error(`Bad JSON from script: ${raw.slice(0, 200)}`));
       }
     });
 
-    proc.on("error", reject);
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
