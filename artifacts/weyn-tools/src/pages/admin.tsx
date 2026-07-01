@@ -8,6 +8,10 @@ function adminHeaders(): Record<string, string> {
   };
 }
 
+function fmtDate(ts: number) {
+  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("weyn-admin") === "1");
@@ -16,20 +20,38 @@ export default function Admin() {
   const [pwLoading, setPwLoading] = useState(false);
 
   const [visits, setVisits] = useState<number | null>(null);
-  const [users, setUsers] = useState<number | null>(null);
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [userList, setUserList] = useState<{ name: string; registeredAt: number }[]>([]);
+  const [showUsers, setShowUsers] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/stats", { headers: adminHeaders() });
       const data = await res.json();
       setVisits(data.visits ?? 0);
-      setUsers(data.users ?? 0);
+      setUserCount(data.users ?? 0);
     } catch {
       toast({ title: "Error", description: "Failed to load stats", variant: "destructive" });
     }
   }, [toast]);
 
   useEffect(() => { if (authed) loadStats(); }, [authed, loadStats]);
+
+  async function toggleUsers() {
+    if (showUsers) { setShowUsers(false); return; }
+    setLoadingUsers(true);
+    try {
+      const res = await fetch("/api/admin/users", { headers: adminHeaders() });
+      const data = await res.json();
+      setUserList(data.users ?? []);
+      setShowUsers(true);
+    } catch {
+      toast({ title: "Error", description: "Failed to load users", variant: "destructive" });
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +128,7 @@ export default function Admin() {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <button
-            onClick={loadStats}
+            onClick={() => { loadStats(); if (showUsers) { setShowUsers(false); } }}
             className="px-3 py-1.5 text-xs font-mono transition-all"
             style={{ border: "1px solid var(--line)", borderRadius: "6px", color: "var(--text-muted)", background: "none", cursor: "pointer" }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
@@ -128,6 +150,8 @@ export default function Admin() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
+
+        {/* Total Visits */}
         <div className="p-5 space-y-1"
           style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)" }}>
           <p className="text-4xl font-bold font-mono" style={{ color: "var(--text-primary)" }}>
@@ -135,14 +159,62 @@ export default function Admin() {
           </p>
           <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>TOTAL VISITS</p>
         </div>
-        <div className="p-5 space-y-1"
-          style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)" }}>
+
+        {/* Total Users — clickable */}
+        <button
+          type="button"
+          onClick={toggleUsers}
+          disabled={loadingUsers}
+          className="p-5 space-y-1 text-left transition-all duration-150"
+          style={{
+            border: `1px solid ${showUsers ? "var(--red-accent)" : "var(--line)"}`,
+            borderRadius: "10px",
+            background: "var(--surface-2)",
+            cursor: "pointer",
+            outline: "none",
+          }}
+          onMouseEnter={(e) => { if (!showUsers) e.currentTarget.style.borderColor = "var(--red-accent)44"; }}
+          onMouseLeave={(e) => { if (!showUsers) e.currentTarget.style.borderColor = "var(--line)"; }}
+        >
           <p className="text-4xl font-bold font-mono" style={{ color: "var(--text-primary)" }}>
-            {users === null ? "—" : users.toLocaleString()}
+            {loadingUsers ? "…" : userCount === null ? "—" : userCount.toLocaleString()}
           </p>
-          <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>TOTAL USERS</p>
-        </div>
+          <p className="text-xs font-mono tracking-widest flex items-center gap-1.5" style={{ color: showUsers ? "var(--red-accent)" : "var(--text-muted)" }}>
+            TOTAL USERS
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              style={{ transform: showUsers ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </p>
+        </button>
       </div>
+
+      {/* User list (toggled) */}
+      {showUsers && (
+        <div style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)", overflow: "hidden" }}>
+          <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
+            <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>
+              REGISTERED USERS ({userList.length})
+            </p>
+          </div>
+          {userList.length === 0 ? (
+            <p className="text-sm text-center py-8" style={{ color: "var(--text-muted)" }}>No users yet</p>
+          ) : (
+            <div>
+              {userList.slice().reverse().map((u, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{ borderBottom: i < userList.length - 1 ? "1px solid var(--line)" : "none" }}
+                >
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{u.name}</span>
+                  <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>{fmtDate(u.registeredAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

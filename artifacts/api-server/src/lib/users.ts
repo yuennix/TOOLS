@@ -33,3 +33,7 @@ export function registerUser(name: string): void {
 export function getUserCount(): number {
   return read().users.length;
 }
+
+export function getUsers(): UserEntry[] {
+  return read().users;
+}

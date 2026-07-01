@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { createKey, getAllKeys, deleteKey, activateKey } from "../lib/keys";
 import { getCount } from "../lib/visits";
-import { registerUser, getUserCount } from "../lib/users";
+import { registerUser, getUserCount, getUsers } from "../lib/users";
 
 const router = Router();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
@@ -31,6 +31,10 @@ router.post("/register-name", (req: Request, res: Response) => {
 
 router.get("/admin/stats", requireAdmin, (_req: Request, res: Response) => {
   return res.json({ visits: getCount(), users: getUserCount() });
+});
+
+router.get("/admin/users", requireAdmin, (_req: Request, res: Response) => {
+  return res.json({ users: getUsers() });
 });
 
 router.post("/admin/login", (req: Request, res: Response) => {
