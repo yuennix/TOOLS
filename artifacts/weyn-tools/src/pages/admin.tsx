@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 interface Key {
@@ -238,13 +237,6 @@ export default function Admin() {
   const used     = keys.filter((k) => keyCategory(k) === "used");
   const expired  = keys.filter((k) => keyCategory(k) === "expired");
 
-  const stats = [
-    { label: "PENDING",  value: pending.length,  color: "#f59e0b" },
-    { label: "APPROVED", value: approved.length, color: "#22c55e" },
-    { label: "USED",     value: used.length,     color: "var(--text-muted)" },
-    { label: "EXPIRED",  value: expired.length,  color: "var(--text-muted)" },
-  ];
-
   const filters: { key: Filter; label: string; count: number }[] = [
     { key: "all",      label: "ALL",      count: keys.length },
     { key: "pending",  label: "PENDING",  count: pending.length },
@@ -272,20 +264,6 @@ export default function Admin() {
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Access Keys</h1>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <Link
-            href="/access"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-all"
-            style={{ border: "1px solid var(--line)", borderRadius: "6px", color: "var(--text-muted)", textDecoration: "none" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red-accent)"; e.currentTarget.style.color = "var(--red-accent)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            ACCESS PAGE
-          </Link>
           <button
             onClick={() => { sessionStorage.removeItem("weyn-admin"); sessionStorage.removeItem("weyn-admin-pw"); setAuthed(false); }}
             className="px-3 py-1.5 text-xs font-mono transition-all"
@@ -298,15 +276,11 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {stats.map((s) => (
-          <div key={s.label} className="p-4 space-y-1"
-            style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)" }}>
-            <p className="text-3xl font-bold font-mono" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>{s.label}</p>
-          </div>
-        ))}
+      {/* Stats */}
+      <div className="p-4 space-y-1"
+        style={{ border: "1px solid var(--line)", borderRadius: "10px", background: "var(--surface-2)" }}>
+        <p className="text-3xl font-bold font-mono" style={{ color: "var(--text-primary)" }}>{keys.length}</p>
+        <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-muted)" }}>TOTAL USERS</p>
       </div>
 
       {/* Generate Key panel */}
