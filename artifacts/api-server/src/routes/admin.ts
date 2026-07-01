@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { createKey, getAllKeys, deleteKey, activateKey } from "../lib/keys";
 import { getCount } from "../lib/visits";
+import { registerUser, getUserCount } from "../lib/users";
 
 const router = Router();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
@@ -19,8 +20,17 @@ router.post("/track-visit", (_req: Request, res: Response) => {
   return res.json({ ok: true });
 });
 
+router.post("/register-name", (req: Request, res: Response) => {
+  const { name } = req.body;
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "Name is required" });
+  }
+  registerUser(name.trim());
+  return res.json({ ok: true });
+});
+
 router.get("/admin/stats", requireAdmin, (_req: Request, res: Response) => {
-  return res.json({ visits: getCount(), users: getAllKeys().length });
+  return res.json({ visits: getCount(), users: getUserCount() });
 });
 
 router.post("/admin/login", (req: Request, res: Response) => {
