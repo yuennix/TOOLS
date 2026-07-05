@@ -26,7 +26,7 @@ def make_session():
     s.headers.update({
         "User-Agent": UA,
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Encoding": "gzip, deflate",
         "Connection": "keep-alive",
     })
     return s
@@ -41,16 +41,20 @@ def parse_reset_link(reset_link):
     return uidb36, token
 
 
-def extract_lsd(html):
-    """Extract the LSD token from a Facebook/Instagram page."""
-    for pattern in [
-        r'\["LSD",\[\],\{"token"\s*:\s*"([^"]+)"',
-        r'"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"',
-        r'"lsd"\s*:\s*\{"token"\s*:\s*"([^"]+)"',
-        r'name="lsd"\s+value="([^"]+)"',
+def extract_fb_dtsg_from_html(html):
+    """
+    Instagram embeds fb_dtsg in script JSON blobs on every page.
+    Try multiple known patterns.
+    """
+    patterns = [
+        r'"fb_dtsg"\s*:\s*\{"token"\s*:\s*"([^"]+)"',
+        r'"dtsg_ag"\s*:\s*\{"token"\s*:\s*"([^"]+)"',
+        r'"token"\s*:\s*"(AQ[A-Za-z0-9_\-]{10,})"',
         r'"token"\s*:\s*"(Ad[A-Za-z0-9_\-]{10,})"',
-    ]:
-        m = re.search(pattern, html)
+        r'fb_dtsg["\s,:\[]+([A-Za-z0-9_\-]{20,})',
+    ]
+    for p in patterns:
+        m = re.search(p, html)
         if m:
             return m.group(1)
     return None
@@ -58,11 +62,10 @@ def extract_lsd(html):
 
 def warmup(session):
     """
-    Visit instagram.com then facebook.com.
-    facebook.com is where the lsd token and fb_dtsg sync call originate.
+    Visit instagram.com to get csrftoken + mid cookies.
+    Also try to grab fb_dtsg from the page HTML directly.
     """
-    # Instagram first for csrftoken / mid
-    session.get(
+    r = session.get(
         "https://www.instagram.com/",
         headers={
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -73,74 +76,56 @@ def warmup(session):
         },
         timeout=15,
     )
-    # Facebook — this is where the lsd token lives and where the sync call is made FROM
-    fb_r = session.get(
-        "https://www.facebook.com/",
-        headers={
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Upgrade-Insecure-Requests": "1",
-        },
-        timeout=15,
-    )
-    lsd = extract_lsd(fb_r.text)
-    return lsd
+    fb_dtsg = extract_fb_dtsg_from_html(r.text)
+    return fb_dtsg
 
 
-def fetch_fb_dtsg(session, lsd_token):
+def get_confirmation_data(session, uidb36, token):
     """
-    Replicate the browser call:
-      GET facebook.com/instagram/sync/?fb_dtsg_ag
-      Referer: https://www.facebook.com/
-      Sec-Fetch-Site: same-origin  ← critical, browser is ON facebook.com
-    Note: Accept-Encoding excludes 'br' so requests can decode gzip natively.
+    Call Instagram's confirmation_web endpoint which returns
+    fb_dtsg, jazoest, error_state as JSON — the original intended API.
+    Now called with a warmed-up session (has csrftoken + mid cookies).
     """
+    csrftoken = session.cookies.get("csrftoken", "")
     url = (
-        "https://www.facebook.com/instagram/sync/"
-        "?fb_dtsg_ag&__user=0&__a=1&__req=1&dpr=2"
-        "&__ccg=EXCELLENT&__comet_req=15"
+        "https://www.instagram.com/api/v1/accounts/password/reset/confirmation_web/"
+        f"?uidb36={uidb36}&token={token}"
     )
     r = session.get(
         url,
         headers={
-            "Accept": "*/*",
-            "Accept-Encoding": "gzip, deflate",
-            "Referer": "https://www.facebook.com/",
-            "x-fb-lsd": lsd_token or "",
-            "x-asbd-id": "359341",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": (
+                f"https://www.instagram.com/accounts/password/reset/confirm/"
+                f"?uidb36={uidb36}&token={token}"
+            ),
+            "X-CSRFToken": csrftoken,
+            "X-IG-App-ID": "936619743392459",
+            "X-Instagram-AJAX": "1",
+            "X-Requested-With": "XMLHttpRequest",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
         },
-        timeout=15,
+        timeout=20,
     )
-    text = r.text
-    # Strip for(;;); anti-hijacking prefix
-    if text.startswith("for(;;);"):
-        text = text[8:]
+    if r.status_code != 200:
+        return None, None, "", f"confirmation_web returned HTTP {r.status_code}: {r.text[:200]}"
     try:
-        data = json.loads(text)
-        token = (
-            data.get("o0", {})
-                .get("data", {})
-                .get("fb_dtsg", {})
-                .get("token")
-        )
-        if token:
-            return token, None
-    except Exception:
-        pass
-    # Fallback regex
-    m = re.search(r'"token"\s*:\s*"([A-Za-z0-9_\-]{10,})"', text)
-    if m:
-        return m.group(1), None
-    return None, f"sync response (HTTP {r.status_code}): {text[:300]}"
+        data = r.json()
+        fb_dtsg  = data.get("fb_dtsg") or data.get("fbDtsg") or data.get("token")
+        jazoest  = data.get("jazoest")
+        error_state = data.get("error_state", "")
+        return fb_dtsg, jazoest, error_state, None
+    except Exception as e:
+        return None, None, "", f"confirmation_web JSON parse error: {e} — {r.text[:200]}"
 
 
-def load_reset_page(session, uidb36, token):
-    """Visit the reset confirm page — picks up jazoest / error_state."""
+def load_reset_page_tokens(session, uidb36, token, existing_fb_dtsg):
+    """
+    Visit the HTML reset-confirm page to pick up jazoest / error_state,
+    and try to extract fb_dtsg from the page HTML as a fallback.
+    """
     r = session.get(
         f"https://www.instagram.com/accounts/password/reset/confirm/"
         f"?uidb36={uidb36}&token={token}",
@@ -155,6 +140,7 @@ def load_reset_page(session, uidb36, token):
         timeout=20,
     )
     html = r.text
+    fb_dtsg = existing_fb_dtsg or extract_fb_dtsg_from_html(html)
     jazoest = None
     error_state = ""
     m = re.search(r'jazoest["\s:=]+([0-9]+)', html)
@@ -163,7 +149,7 @@ def load_reset_page(session, uidb36, token):
     m = re.search(r'"error_state"\s*:\s*"([^"]*)"', html)
     if m:
         error_state = m.group(1)
-    return jazoest, error_state
+    return fb_dtsg, jazoest, error_state
 
 
 def submit_password_reset(session, uidb36, token, fb_dtsg, jazoest, error_state, new_password):
@@ -232,18 +218,19 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         session = make_session()
         new_password = generate_password(custom_password)
 
-        # Step 1: instagram.com + facebook.com → cookies + lsd
-        lsd_token = warmup(session)
+        # Step 1: visit instagram.com — get cookies + try to grab fb_dtsg from page HTML
+        fb_dtsg_from_home = warmup(session)
 
-        # Step 2: facebook.com/instagram/sync/ → fb_dtsg (same-origin from fb)
-        fb_dtsg, sync_err = fetch_fb_dtsg(session, lsd_token)
-        if not fb_dtsg:
-            return {"success": False, "error": f"Could not fetch fb_dtsg. {sync_err}"}
+        # Step 2: call confirmation_web (the designed API for this) with warmed session
+        fb_dtsg, jazoest, error_state, conf_err = get_confirmation_data(session, uidb36, token)
 
-        # Step 3: reset confirm page → jazoest, error_state
-        jazoest, error_state = load_reset_page(session, uidb36, token)
+        # Step 3: visit the reset HTML page — fallback for fb_dtsg, and for jazoest/error_state
+        fb_dtsg, jazoest, error_state = load_reset_page_tokens(
+            session, uidb36, token,
+            existing_fb_dtsg=fb_dtsg or fb_dtsg_from_home,
+        )
 
-        # Step 4: submit new password
+        # Step 4: submit — even if fb_dtsg is empty, try anyway (csrftoken may suffice)
         r = submit_password_reset(
             session, uidb36, token, fb_dtsg, jazoest, error_state, new_password
         )
@@ -256,7 +243,13 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         )
 
         if not success:
-            return {"success": False, "error": f"Reset failed (HTTP {r.status_code}): {r.text[:400]}"}
+            return {
+                "success": False,
+                "error": (
+                    f"Reset failed (HTTP {r.status_code}): {r.text[:500]}"
+                    + (f" | confirmation_web: {conf_err}" if conf_err else "")
+                ),
+            }
 
         display = f"@{username}" if username else f"uidb36:{uidb36}"
         send_telegram(
