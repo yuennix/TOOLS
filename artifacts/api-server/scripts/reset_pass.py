@@ -73,12 +73,14 @@ def get_encryption_key(session):
     """
     Fetch Instagram's public RSA key for browser password encryption.
     Endpoint: /api/v1/web/encryption/key/?version=10&signed_key=1
-    Returns: (key_id: int, public_key_b64: str)
+    Returns: (key_id: int, public_key_b64: str) or raises with helpful message.
     """
+    csrftoken = session.cookies.get("csrftoken", "")
     r = session.get(
         "https://www.instagram.com/api/v1/web/encryption/key/?version=10&signed_key=1",
         headers={
             "Accept": "*/*",
+            "X-CSRFToken": csrftoken,
             "X-IG-App-ID": "936619743392459",
             "X-Requested-With": "XMLHttpRequest",
             "Referer": "https://www.instagram.com/",
@@ -88,8 +90,24 @@ def get_encryption_key(session):
         },
         timeout=15,
     )
-    data = r.json()
-    return data.get("public_key_id"), data.get("public_key")
+    text = r.text.strip()
+    if not text:
+        raise RuntimeError(
+            f"Encryption key endpoint returned empty body (HTTP {r.status_code})"
+        )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        raise RuntimeError(
+            f"Encryption key endpoint returned non-JSON (HTTP {r.status_code}): {text[:200]}"
+        )
+    key_id = data.get("public_key_id")
+    pub_key = data.get("public_key")
+    if not key_id or not pub_key:
+        raise RuntimeError(
+            f"Encryption key missing from response: {text[:200]}"
+        )
+    return key_id, pub_key
 
 
 def encrypt_password(password, pub_key_id, pub_key_b64):
