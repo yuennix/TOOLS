@@ -51,6 +51,7 @@ def warmup(session):
     """
     Visit instagram.com — get csrftoken + mid cookies.
     Also parse __rev for the x-instagram-ajax header value.
+    Also cache page HTML so we can extract the public key from it.
     HAR shows x-instagram-ajax = 1042647521 (the revision number), not "1".
     """
     r = session.get(
@@ -64,50 +65,101 @@ def warmup(session):
         },
         timeout=15,
     )
-    m = re.search(r'"__rev"\s*:\s*(\d+)', r.text)
+    html = r.text
+    m = re.search(r'"__rev"\s*:\s*(\d+)', html)
     rev = m.group(1) if m else "1"
-    return rev
+    return rev, html
 
 
-def get_encryption_key(session):
+def _parse_enc_key_from_html(html):
     """
-    Fetch Instagram's public RSA key for browser password encryption.
-    Endpoint: /api/v1/web/encryption/key/?version=10&signed_key=1
-    Returns: (key_id: int, public_key_b64: str) or raises with helpful message.
+    Instagram embeds the RSA public key in page script-tag JSON blobs.
+    Patterns seen in the wild (all inside <script> data payloads):
+      "public_key_id":227,"public_key":"AQHF...base64..."
+      "enc_key":{"key_id":227,"public_key":"..."}
+    """
+    patterns = [
+        r'"public_key_id"\s*:\s*(\d+)\s*,\s*"public_key"\s*:\s*"([A-Za-z0-9+/=]+)"',
+        r'"key_id"\s*:\s*(\d+)\s*,\s*"public_key"\s*:\s*"([A-Za-z0-9+/=]+)"',
+    ]
+    for p in patterns:
+        m = re.search(p, html)
+        if m:
+            return int(m.group(1)), m.group(2)
+    return None, None
+
+
+def get_encryption_key(session, cached_html=""):
+    """
+    Get Instagram's RSA public key for browser password encryption (key version 10).
+
+    Strategy (logged-out sessions):
+      1. Try the dedicated API endpoint.
+      2. Fall back to parsing the public key from the homepage HTML
+         (Instagram embeds it in page script-tag JSON for the login form).
+      3. Fall back to fetching the reset confirm page and parsing from there.
+
+    Returns: (key_id: int, public_key_b64: str) or raises with a helpful message.
     """
     csrftoken = session.cookies.get("csrftoken", "")
-    r = session.get(
-        "https://www.instagram.com/api/v1/web/encryption/key/?version=10&signed_key=1",
-        headers={
-            "Accept": "*/*",
-            "X-CSRFToken": csrftoken,
-            "X-IG-App-ID": "936619743392459",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.instagram.com/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-        },
-        timeout=15,
-    )
-    text = r.text.strip()
-    if not text:
-        raise RuntimeError(
-            f"Encryption key endpoint returned empty body (HTTP {r.status_code})"
-        )
+
+    # ── Attempt 1: dedicated endpoint ───────────────────────────────────────
     try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        raise RuntimeError(
-            f"Encryption key endpoint returned non-JSON (HTTP {r.status_code}): {text[:200]}"
+        r = session.get(
+            "https://www.instagram.com/api/v1/web/encryption/key/?version=10&signed_key=1",
+            headers={
+                "Accept": "*/*",
+                "X-CSRFToken": csrftoken,
+                "X-IG-App-ID": "936619743392459",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": "https://www.instagram.com/",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+            },
+            timeout=15,
         )
-    key_id = data.get("public_key_id")
-    pub_key = data.get("public_key")
-    if not key_id or not pub_key:
-        raise RuntimeError(
-            f"Encryption key missing from response: {text[:200]}"
+        if r.status_code == 200:
+            text = r.text.strip()
+            if text:
+                data = json.loads(text)
+                key_id = data.get("public_key_id")
+                pub_key = data.get("public_key")
+                if key_id and pub_key:
+                    return key_id, pub_key
+    except Exception:
+        pass
+
+    # ── Attempt 2: parse from homepage HTML (already fetched during warmup) ─
+    if cached_html:
+        key_id, pub_key = _parse_enc_key_from_html(cached_html)
+        if key_id and pub_key:
+            return key_id, pub_key
+
+    # ── Attempt 3: fetch the login page — it always embeds the key ──────────
+    try:
+        r2 = session.get(
+            "https://www.instagram.com/accounts/login/",
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Referer": "https://www.instagram.com/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Upgrade-Insecure-Requests": "1",
+            },
+            timeout=15,
         )
-    return key_id, pub_key
+        key_id, pub_key = _parse_enc_key_from_html(r2.text)
+        if key_id and pub_key:
+            return key_id, pub_key
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "Could not obtain Instagram RSA encryption key from API or page HTML. "
+        "All three strategies failed."
+    )
 
 
 def encrypt_password(password, pub_key_id, pub_key_b64):
@@ -284,11 +336,12 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
         session = make_session()
         new_password = generate_password(custom_password)
 
-        # 1. Visit instagram.com — cookies + revision number
-        rev = warmup(session)
+        # 1. Visit instagram.com — cookies + revision number + cached HTML
+        rev, home_html = warmup(session)
 
         # 2. Fetch Instagram's RSA public key for password encryption
-        pub_key_id, pub_key_b64 = get_encryption_key(session)
+        #    (tries API endpoint, then parses from homepage HTML, then login page)
+        pub_key_id, pub_key_b64 = get_encryption_key(session, cached_html=home_html)
         if not pub_key_id or not pub_key_b64:
             return {"success": False, "error": "Could not fetch Instagram encryption key"}
 
