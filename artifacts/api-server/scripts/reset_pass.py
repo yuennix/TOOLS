@@ -152,10 +152,9 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
 
         r2_text = r2.text.replace("\\", "")
         try:
-            challenge_context_final = (
-                r2_text
-                .split(f"(bk.action.i64.Const, {cni}), \"")[1]
-                .split("\", (bk.action.bool.Const, false)))")[0]
+            needle_start = f'(bk.action.i64.Const, {cni}), "'
+            needle_end   = '", (bk.action.bool.Const, false)))'
+            challenge_context_final = r2_text.split(needle_start)[1].split(needle_end)[0]
             if not challenge_context_final:
                 raise ValueError("empty")
         except Exception:
