@@ -95,6 +95,7 @@ def fetch_fb_dtsg(session, lsd_token):
       GET facebook.com/instagram/sync/?fb_dtsg_ag
       Referer: https://www.facebook.com/
       Sec-Fetch-Site: same-origin  ← critical, browser is ON facebook.com
+    Note: Accept-Encoding excludes 'br' so requests can decode gzip natively.
     """
     url = (
         "https://www.facebook.com/instagram/sync/"
@@ -105,6 +106,7 @@ def fetch_fb_dtsg(session, lsd_token):
         url,
         headers={
             "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate",
             "Referer": "https://www.facebook.com/",
             "x-fb-lsd": lsd_token or "",
             "x-asbd-id": "359341",
